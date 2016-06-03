@@ -1,0 +1,30 @@
+<head>
+    <title>#1 Clear canvas</title>
+    <script type="text/javascript" src="../lib/gl-matrix.js"></script>
+</head>
+<body onload="javascript:startWebGLApp()">
+    <canvas id="canvas" style="border:none" width="600" height="800" />
+</body>
+<script type="text/javascript">
+    "use strict";
+
+    function startWebGLApp() {
+        var gl = getWebGLContext("canvas");
+        gl.clearColor(0,0,0,1);
+        clear(gl);
+    }
+    
+    function getWebGLContext(id) {
+        var canvasElement = document.getElementById(id);
+        try {
+            var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+            return gl;
+        }
+        catch(e) {}
+        return;
+    }
+    
+    function clear(gl) {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    }
+</script>

@@ -1,0 +1,100 @@
+<head>
+    <title>#2 Draw triangle</title>
+    <script type="text/javascript" src="../lib/gl-matrix.js"></script>
+    <script type="text/javascript" src="../lib/mdn-getShader.js"></script>
+</head>
+<body onload="javascript:startWebGLApp()">
+    <canvas id="canvas" style="border:none" width="600" height="800" />
+</body>
+<script type="text/javascript">
+    "use strict";
+
+    function startWebGLApp() {
+        var gl = getWebGLContext("canvas");
+        var programs = {
+            fragShader: getShader("fragment-shader"),
+            vertexShader: getShader("vertex-shader")
+        };
+        var attributes = initShaders(gl);
+        var shape = createTriangle(gl);
+        gl.clearColor(0,0,0,1);
+        draw(gl, shape, attributes);
+    }
+
+    function getWebGLContext(id) {
+        var canvasElement = document.getElementById(id);
+        try {
+            var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+            return gl;
+        }
+        catch(e) {}
+        return;
+    }
+
+    function initShaders(gl) {
+        var fragmentShader = getShader(gl, "fragment-shader");
+        var vertexShader = getShader(gl, "vertex-shader");
+
+        // Creating shader program
+        var shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            alert("Could not initialize shaders.");
+        }
+
+        gl.useProgram(shaderProgram);
+
+        var aVertexCoords = gl.getAttribLocation(shaderProgram, "aVertexCoords");
+        gl.enableVertexAttribArray(aVertexCoords);
+
+        return {
+            aVertexCoords: aVertexCoords
+        };
+    }
+
+    function createTriangle(gl) {
+        var triangleVertexCoordBuffer = gl.createBuffer();
+        var coorsdArray = [
+             0,  1, // 1st point
+            -1, -1, // 2nd point
+             1, -1  // 3rd point
+        ];
+        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexCoordBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coorsdArray), gl.STATIC_DRAW);
+        return {
+            coordsBuffer: triangleVertexCoordBuffer,
+            coorsdArray: coorsdArray,
+            pointCount: 3,
+            pointSize: 2
+        };
+    }
+
+    function draw(gl, shape, attributes) {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        // setting the current buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.coordsBuffer);
+
+        // associate attribute 'aVertexCoords' with current buffer
+        gl.vertexAttribPointer(attributes.aVertexCoords, 2, gl.FLOAT, false, 0, 0);
+
+        // draw triangles, using the shaders of the current program, with the current attributes
+        gl.drawArrays(gl.TRIANGLES, 0, shape.pointCount);
+    }
+
+</script>
+<script id="fragment-shader" type="x-shader/x-fragment">
+  void main(void) {
+    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  }
+</script>
+<script id="vertex-shader" type="x-shader/x-vertex">
+  attribute vec2 aVertexCoords;
+
+  void main(void) {
+    gl_Position = vec4(aVertexCoords*0.5, 0.0, 1.0);
+  }
+</script>
