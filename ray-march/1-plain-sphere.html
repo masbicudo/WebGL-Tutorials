@@ -1,0 +1,143 @@
+<head>
+    <title>#1 Plain sphere</title>
+    <script type="text/javascript" src="../lib/gl-matrix.js"></script>
+    <script type="text/javascript" src="../lib/mdn-getShader.js"></script>
+</head>
+<body onload="javascript:startWebGLApp()">
+    <canvas id="canvas" style="border:none" width="600" height="800" />
+</body>
+<script type="text/javascript">
+    "use strict";
+
+    function startWebGLApp() {
+        var gl = getWebGLContext("canvas");
+        var programs = {
+            fragShader: getShader("fragment-shader"),
+            vertexShader: getShader("vertex-shader")
+        };
+        var programParams = initShaders(gl);
+        var shape = createSquare(gl);
+        gl.clearColor(0, 0, 0, 1);
+        draw(gl, shape, programParams);
+    }
+
+    function getWebGLContext(id) {
+        var canvasElement = document.getElementById(id);
+        try {
+            var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+            return gl;
+        }
+        catch(e) {}
+        return;
+    }
+
+    function initShaders(gl) {
+        var fragmentShader = getShader(gl, "fragment-shader");
+        var vertexShader = getShader(gl, "vertex-shader");
+
+        // Creating shader program
+        var shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+            alert("Could not initialize shaders.");
+        }
+
+        gl.useProgram(shaderProgram);
+
+        var aVertexCoords = gl.getAttribLocation(shaderProgram, "aVertexCoords");
+        gl.enableVertexAttribArray(aVertexCoords);
+
+        var uTransform = gl.getUniformLocation(shaderProgram, "uTransform");
+
+        return {
+            aVertexCoords: aVertexCoords,
+            uTransform: uTransform
+        };
+    }
+
+    function createSquare(gl) {
+        var squareVertexCoordBuffer = gl.createBuffer();
+        var coorsdArray = [
+            -1,  1, // 1st point
+             1,  1, // 2nd point
+            -1, -1, // 3rd point
+             1, -1  // 4th point
+        ];
+        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexCoordBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coorsdArray), gl.STATIC_DRAW);
+        return {
+            coordsBuffer: squareVertexCoordBuffer,
+            coorsdArray: coorsdArray,
+            pointCount: 4,
+            pointSize: 2
+        };
+    }
+
+    function draw(gl, shape, programParams) {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        var transformMatrix = [
+            0.6,   0,   0,   0,
+              0, 0.8,   0,   0,
+              0,   0,   1,   0,
+              0,   0,   0,   1
+        ];
+        gl.uniformMatrix4fv(programParams.uTransform, false, transformMatrix);
+
+        // setting the current buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, shape.coordsBuffer);
+
+        // associate attribute 'aVertexCoords' with current buffer
+        gl.vertexAttribPointer(programParams.aVertexCoords, 2, gl.FLOAT, false, 0, 0);
+
+        // draw triangles, using the shaders of the current program, with the current attributes
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, shape.pointCount);
+    }
+
+</script>
+<script id="fragment-shader" type="x-shader/x-fragment">
+  precision mediump float;
+  const int NUM_STEPS = 40;
+  
+  varying vec4 pos;
+
+  float distSphere(vec3 p, vec3 c, float r) {
+    vec3 k = p - c;
+    float d = sqrt(dot(k, k)) - r;
+    return d;
+  }
+
+  void main(void) {
+    vec3 p = vec3(pos.xy, 0.0);
+    int steps;
+    for (int i = 0; i < NUM_STEPS; i++) {
+        float dist = min(
+            distSphere(p, vec3(0.0), 0.5),
+            distSphere(p, vec3(0.3), 0.4)
+            );
+        steps = i;
+        if (dist < 0.0001) {
+            break;
+        }
+        p = vec3(p.x, p.y, p.z + dist);
+    }
+    if (steps == NUM_STEPS-1) {
+      gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    } else {
+      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    }
+  }
+</script>
+<script id="vertex-shader" type="x-shader/x-vertex">
+  attribute vec2 aVertexCoords;
+  varying vec4 pos;
+  uniform mat4 uTransform;
+
+  void main(void) {
+    gl_Position = vec4(aVertexCoords, 0.0, 1.0);
+    pos = uTransform * gl_Position * 1.5;
+  }
+</script>
