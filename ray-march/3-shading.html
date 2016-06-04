@@ -1,5 +1,5 @@
 <head>
-    <title>#1 Plain sphere</title>
+    <title>#3 Shading</title>
     <script type="text/javascript" src="../lib/gl-matrix.js"></script>
     <script type="text/javascript" src="../lib/mdn-getShader.js"></script>
 </head>
@@ -100,8 +100,13 @@
 </script>
 <script id="fragment-shader" type="x-shader/x-fragment">
   precision highp float;
-  const int NUM_STEPS = 40;
+  const int NUM_STEPS = 128;
   const float DIST_DIFF = 1./1024.;
+  const float PIX_DIFF = 1./512.;
+  const float LIGHT_AMBIENT = 0.075;
+  const vec3 LIGHT_POINT = vec3(-1.0, 1.0, -1.0);
+  const float MATERIAL_SHINESS = 5.;
+  const float LIGHT_INTENSITY = 8.;
 
   varying vec4 pos;
 
@@ -112,8 +117,8 @@
   float distFunc(vec3 v) {
     return distSphere(v, vec3(0.0, 0.0, 2.0), 0.5);
   }
-
-  void main(void) {
+  
+  void mainIterations(void) {
     vec3 p = vec3(pos.xy, 0.0);
     int steps = 0;
     for (int i = 0; i < NUM_STEPS; i++) {
@@ -124,11 +129,56 @@
             break;
         }
     }
+    gl_FragColor = vec4(vec3(float(steps)/float(NUM_STEPS)), 1.0);
+  }
+
+  void main(void) {
+    //mainIterations(); return;
+    vec3 p = vec3(pos.xy, 0.0);
+    int steps = 0;
+    vec3 normal = vec3(0.0, 0.0, 0.0);
+    
+    for (int i = 0; i < NUM_STEPS; i++) {
+        steps++;
+        float dist = distFunc(p);
+        if (dist < DIST_DIFF) {
+            vec3 pX = vec3(p.x+PIX_DIFF, p.y, p.z);
+            vec3 pY = vec3(p.x, p.y+PIX_DIFF, p.z);
+            vec3 pZ = vec3(p.x, p.y, p.z+PIX_DIFF);
+            float distX = distFunc(pX);
+            float distY = distFunc(pY);
+            float distZ = distFunc(pZ);
+
+            // this will give the surface normal for the fragment
+            normal = normalize(vec3(distX-dist, distY-dist, distZ-dist));
+
+            break;
+        }
+        p = vec3(p.xy, p.z + dist);
+    }
+
     if (steps == NUM_STEPS) {
       gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     } else {
-      gl_FragColor = vec4(1.0);
+        // Diffuse
+        vec3 lightPos = LIGHT_POINT;
+        vec3 lightDir = (lightPos - p);
+        float lightIntensity = LIGHT_INTENSITY / dot(lightDir, lightDir);
+        lightDir = normalize(lightDir);
+        float diffuse = max(dot(normal, lightDir), 0.0);
+
+        // Specular
+        vec3 viewDir = normalize(vec3(pos.xy, 0.0) - p);
+        vec3 reflectDir = reflect(-lightDir, normal);
+        float specular = pow(max(dot(viewDir, reflectDir), 0.0), MATERIAL_SHINESS);
+
+        float lightness = clamp((specular + diffuse) * lightIntensity + LIGHT_AMBIENT, 0.0, 1.0);
+        gl_FragColor = vec4(lightness, lightness, lightness, 1.0);
     }
+  }
+
+  float map(float value, float low1, float high1, float low2, float high2) {
+    return low2 + (value - low1) * (high2 - low2) / (high1 - low1);
   }
 </script>
 <script id="vertex-shader" type="x-shader/x-vertex">

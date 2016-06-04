@@ -1,5 +1,5 @@
 <head>
-    <title>#1 Plain sphere</title>
+    <title>#2 Display iterations</title>
     <script type="text/javascript" src="../lib/gl-matrix.js"></script>
     <script type="text/javascript" src="../lib/mdn-getShader.js"></script>
 </head>
@@ -124,11 +124,7 @@
             break;
         }
     }
-    if (steps == NUM_STEPS) {
-      gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    } else {
-      gl_FragColor = vec4(1.0);
-    }
+    gl_FragColor = vec4(vec3(float(steps)/float(NUM_STEPS)), 1.0);
   }
 </script>
 <script id="vertex-shader" type="x-shader/x-vertex">
