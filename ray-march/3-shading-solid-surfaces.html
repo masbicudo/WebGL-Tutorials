@@ -1,5 +1,5 @@
 <head>
-    <title>#1 Plain sphere</title>
+    <title>#3 Shading solid surfaces</title>
     <script type="text/javascript" src="../lib/gl-matrix.js"></script>
     <script type="text/javascript" src="../lib/mdn-getShader.js"></script>
 </head>
@@ -101,8 +101,8 @@
 <script id="fragment-shader" type="x-shader/x-fragment">
   precision highp float;
   const int NUM_STEPS = 128;
-  const float PIX_DIFF = 1./512.;
   const float DIST_DIFF = 1./1024.;
+  const float PIX_DIFF = 1./512.;
   const float LIGHT_AMBIENT = 0.075;
   const vec3 LIGHT_POINT = vec3(-1.0, 1.0, -1.0);
   const float MATERIAL_SHINESS = 5.;
@@ -115,25 +115,9 @@
   }
 
   float distFunc(vec3 v) {
-    const mat4 T = mat4(
-         1. , 0. , 0. , 0. ,
-         0. , 1. , 0. , 0. ,
-         0. , 0. , 1. , 0. ,
-        -0.21,-0.21, 0.21 , 1.
-    );
-    vec3 v2 = (T * vec4(v,1.)).xyz;
-    return min(
-            max(
-                distSphere(v, vec3(0.0, 0.0, 2.0), 0.5),
-                -distSphere(v, vec3(0.4, 0.4, 1.6), 0.5)
-            ),
-            max(
-                distSphere(v2, vec3(0.0, 0.0, 2.0), 0.5),
-                distSphere(v2, vec3(0.4, 0.4, 1.6), 0.5)
-            )
-        );
+    return distSphere(v, vec3(0.0, 0.0, 2.0), 0.5);
   }
-  
+
   void mainIterations(void) {
     vec3 p = vec3(pos.xy, 0.0);
     int steps = 0;
