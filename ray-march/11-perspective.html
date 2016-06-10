@@ -1,10 +1,10 @@
 <head>
-    <title>#? Perspective</title>
+    <title>#11 Perspective</title>
     <script type="text/javascript" src="../lib/gl-matrix.js"></script>
     <script type="text/javascript" src="../lib/mdn-getShader.js"></script>
 </head>
 <body onload="javascript:startWebGLApp()">
-  <canvas id="canvas" style="border:none; width:450px; height:600px;" width="450" height="600" />
+  <canvas id="canvas" style="border:none; width=600px height=800px" width="600" height="800" />
 </body>
 <script type="text/javascript">
   "use strict";
@@ -81,11 +81,14 @@
   function draw(gl, shape, programParams) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    var ratio = canvas.width / canvas.height;
+    var rx = ratio > 1 ? 1 : ratio;
+    var ry = ratio > 1 ? 1/ratio : 1;
     var transformMatrix = [
-      0.6,   0,   0,   0,
-        0, 0.8,   0,   0,
-        0,   0,   1,   0,
-        0,   0,   0,   1
+         rx,   0,   0,   0,
+          0,  ry,   0,   0,
+          0,   0,   1,   0,
+          0,   0,   0,   1
     ];
     gl.uniformMatrix4fv(programParams.uTransform, false, transformMatrix);
 
@@ -111,14 +114,14 @@
 </script>
 <script id="fragment-shader" type="x-shader/x-fragment">
   precision highp float;
-  const int NUM_STEPS = 128;
-  const float DIST_DIFF = 1./1024.;
-  const float PIX_DIFF = 1./512.;
+  const int MAX_STEPS = 128;
+  const float CONTACT_DIFF = 1./1024.;
+  const float NORMAL_GRADIENT_DIFF = 1./512.;
   const float LIGHT_AMBIENT = 0.075;
   const vec3 LIGHT_POINT = vec3(-3.0, 0.7, -0.7);
   const float MATERIAL_SHINESS = 5.;
   const float LIGHT_INTENSITY = 8.;
-  const vec3 PERSPECTIVE_ORIGIN = vec3(0., 0., -1.6);
+  const vec3 PERSPECTIVE_ORIGIN = vec3(0., 0., -1.);
 
   varying vec4 pos;
 
@@ -176,7 +179,7 @@
   }
 
   float distFunc(vec3 v) {
-    v = translate(v, vec3(0.,0.,-1.));
+    v = translate(v, vec3(0.,0.,-0.825));
     v = rotateAroundX(v, (uTime*1. + 60.)*Deg2Rad);
     v = rotateAroundY(v, (uTime*1. + 30.)*Deg2Rad);
 
@@ -200,10 +203,10 @@
     int steps = 0;
     float res = 0.9;
     float prevDist = 1000.0;
-    for (int i = 0; i < NUM_STEPS; i++) {
+    for (int i = 0; i < MAX_STEPS; i++) {
       steps++;
       float dist = distFunc(origin + traveled*direction);
-      if (dist < DIST_DIFF)
+      if (dist < CONTACT_DIFF)
         break;
       if (dist >= prevDist)
         res = min(res, spread*prevDist/(maxTravel - traveled));
@@ -212,7 +215,7 @@
         break;
       prevDist = dist;
     }
-    if (maxTravel - traveled >= DIST_DIFF * 32.) {
+    if (maxTravel - traveled >= CONTACT_DIFF * 32.) {
       return 0.1;
     }
     else {
@@ -223,24 +226,24 @@
   void mainIterations(void) {
     vec3 p = vec3(pos.xy, 0.0);
     int steps = 0;
-    for (int i = 0; i < NUM_STEPS; i++) {
+    for (int i = 0; i < MAX_STEPS; i++) {
         steps++;
         float dist = distFunc(p);
         p = vec3(p.xy, p.z + dist);
-        if (dist < DIST_DIFF) {
+        if (dist < CONTACT_DIFF) {
             break;
         }
     }
-    gl_FragColor = vec4(vec3(float(steps)/float(NUM_STEPS)), 1.0);
+    gl_FragColor = vec4(vec3(float(steps)/float(MAX_STEPS)), 1.0);
   }
   void mainDepth(float minDepth, float maxDepth) {
     vec3 p = vec3(pos.xy, 0.0);
     int steps = 0;
-    for (int i = 0; i < NUM_STEPS; i++) {
+    for (int i = 0; i < MAX_STEPS; i++) {
         steps++;
         float dist = distFunc(p);
         p = vec3(p.xy, p.z + dist);
-        if (dist < DIST_DIFF) {
+        if (dist < CONTACT_DIFF) {
             break;
         }
     }
@@ -255,13 +258,13 @@
     float traveledSoFar = 0.;
     float travelToNearest = 0.;
     float distanceToNearest = INFINITY;
-    for (int i = 0; i < NUM_STEPS; i++) {
+    for (int i = 0; i < MAX_STEPS; i++) {
       float dist = distFunc(p + traveledSoFar*travelDirection);
       if (dist < distanceToNearest) {
         distanceToNearest = dist;
         travelToNearest = traveledSoFar;
       }
-      if (dist < DIST_DIFF)
+      if (dist < CONTACT_DIFF)
         break;
       if (traveledSoFar > 2.)
         break;
@@ -272,10 +275,10 @@
       gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     } else {
         p += traveledSoFar*travelDirection;
-        if (distanceToNearest < DIST_DIFF) {
-          vec3 pX = vec3(p.x+PIX_DIFF, p.y, p.z);
-          vec3 pY = vec3(p.x, p.y+PIX_DIFF, p.z);
-          vec3 pZ = vec3(p.x, p.y, p.z+PIX_DIFF);
+        if (distanceToNearest < CONTACT_DIFF) {
+          vec3 pX = vec3(p.x+NORMAL_GRADIENT_DIFF, p.y, p.z);
+          vec3 pY = vec3(p.x, p.y+NORMAL_GRADIENT_DIFF, p.z);
+          vec3 pZ = vec3(p.x, p.y, p.z+NORMAL_GRADIENT_DIFF);
           float distX = distFunc(pX);
           float distY = distFunc(pY);
           float distZ = distFunc(pZ);
@@ -322,6 +325,6 @@
 
   void main(void) {
     gl_Position = vec4(aVertexCoords, 0.0, 1.0);
-    pos = uTransform * gl_Position * 1.5;
+    pos = uTransform * gl_Position;
   }
 </script>

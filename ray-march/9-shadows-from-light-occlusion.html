@@ -1,5 +1,5 @@
 <head>
-    <title>#8 Object identification</title>
+    <title>#9 Shadows from light occlusion</title>
     <script type="text/javascript" src="../lib/gl-matrix.js"></script>
     <script type="text/javascript" src="../lib/mdn-getShader.js"></script>
 </head>
@@ -12,8 +12,8 @@
   function startWebGLApp() {
     var gl = getWebGLContext("canvas");
     var programs = {
-        fragShader: getShader("fragment-shader"),
-        vertexShader: getShader("vertex-shader")
+      fragShader: getShader("fragment-shader"),
+      vertexShader: getShader("vertex-shader")
     };
     var programParams = initShaders(gl);
     var shape = createSquare(gl);
@@ -81,11 +81,14 @@
   function draw(gl, shape, programParams) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    var ratio = canvas.width / canvas.height;
+    var rx = ratio > 1 ? 1 : ratio;
+    var ry = ratio > 1 ? 1/ratio : 1;
     var transformMatrix = [
-      0.6,   0,   0,   0,
-        0, 0.8,   0,   0,
-        0,   0,   1,   0,
-        0,   0,   0,   1
+         rx,   0,   0,   0,
+          0,  ry,   0,   0,
+          0,   0,   1,   0,
+          0,   0,   0,   1
     ];
     gl.uniformMatrix4fv(programParams.uTransform, false, transformMatrix);
 
@@ -111,19 +114,13 @@
 </script>
 <script id="fragment-shader" type="x-shader/x-fragment">
   precision highp float;
-  const int NUM_STEPS = 100;
+  const int MAX_STEPS = 100;
   const float CONTACT_DIFF = 2./1024.;
-  const float NORMAL_GRADIENT_DIFF = 32./1024./1024.;
+  const float NORMAL_GRADIENT_DIFF = 8./1024./1024.;
   const float LIGHT_AMBIENT = 0.075;
   const vec3 LIGHT_POINT = vec3(-3.0, 0.7, -0.7);
-
-  const float OBJ1_MATERIAL_SHINESS = 5.;
-  const float OBJ1_LIGHT_INTENSITY = 8.;
-  const vec3 OBJ1_COLOR = vec3(1.0, 0.5, 0.5);
-
-  const float OBJ2_MATERIAL_SHINESS = 0.4;
-  const float OBJ2_LIGHT_INTENSITY = 6.;
-  const vec3 OBJ2_COLOR = vec3(0.5, 1.0, 0.5);
+  const float MATERIAL_SHINESS = 5.;
+  const float LIGHT_INTENSITY = 8.;
 
   varying vec4 pos;
 
@@ -188,7 +185,7 @@
     return (T * vec4(v, 1.0)).xyz;
   }
 
-  float distFunc(vec3 v, out int objectId) {
+  float distFunc(vec3 v) {
     v = translate(v, vec3(0.,0.,-1.));
     v = rotateAroundX(v, (uTime*1. + 60.)*Deg2Rad);
     v = rotateAroundY(v, (uTime*1. + 30.)*Deg2Rad);
@@ -205,12 +202,6 @@
     v2 = rotateAroundY(v2, -90.*Deg2Rad);
     float d2 = distTorusNxx(10., 10., v2, 0.4, 0.1);
 
-    if (d1 < d2) {
-      objectId = 1;
-    }
-    else {
-      objectId = 2;
-    }
     return min(d1, d2);
   }
 
@@ -219,10 +210,9 @@
     int steps = 0;
     float res = 0.9;
     float prevDist = 1000.0;
-    int objectId;
-    for (int i = 0; i < NUM_STEPS; i++) {
+    for (int i = 0; i < MAX_STEPS; i++) {
       steps++;
-      float dist = distFunc(origin + traveled*direction, objectId);
+      float dist = distFunc(origin + traveled*direction);
       if (dist < CONTACT_DIFF)
         break;
       if (dist >= prevDist)
@@ -243,24 +233,22 @@
   void mainIterations(void) {
     vec3 p = vec3(pos.xy, 0.0);
     int steps = 0;
-    int objectId;
-    for (int i = 0; i < NUM_STEPS; i++) {
+    for (int i = 0; i < MAX_STEPS; i++) {
         steps++;
-        float dist = distFunc(p, objectId);
+        float dist = distFunc(p);
         p = vec3(p.xy, p.z + dist);
         if (dist < CONTACT_DIFF || p.z > 2.) {
             break;
         }
     }
-    gl_FragColor = vec4(vec3(float(steps)/float(NUM_STEPS)), 1.0);
+    gl_FragColor = vec4(vec3(float(steps)/float(MAX_STEPS)), 1.0);
   }
   void mainDepth(float minDepth, float maxDepth) {
     vec3 p = vec3(pos.xy, 0.0);
     int steps = 0;
-    int objectId;
-    for (int i = 0; i < NUM_STEPS; i++) {
+    for (int i = 0; i < MAX_STEPS; i++) {
         steps++;
-        float dist = distFunc(p, objectId);
+        float dist = distFunc(p);
         p = vec3(p.xy, p.z + dist);
         if (dist < CONTACT_DIFF || p.z > 2.) {
             break;
@@ -274,10 +262,9 @@
     vec3 normal = vec3(0.0, 0.0, 0.0);
     float nearestDistance = 1000.;
     float travelToNearest = 0.;
-    int objectId;
-    for (int i = 0; i < NUM_STEPS; i++) {
+    for (int i = 0; i < MAX_STEPS; i++) {
       steps++;
-      float dist = distFunc(p, objectId);
+      float dist = distFunc(p);
       if (dist < nearestDistance) {
         nearestDistance = dist;
         travelToNearest = p.z;
@@ -294,14 +281,13 @@
     } else {
       p = vec3(pos.xy, travelToNearest);
 
-      if (nearestDistance < CONTACT_DIFF || steps == NUM_STEPS) {
+      if (nearestDistance < CONTACT_DIFF || steps == MAX_STEPS) {
         vec3 pX = vec3(p.x+NORMAL_GRADIENT_DIFF, p.y, p.z);
         vec3 pY = vec3(p.x, p.y+NORMAL_GRADIENT_DIFF, p.z);
         vec3 pZ = vec3(p.x, p.y, p.z+NORMAL_GRADIENT_DIFF);
-        int objectId2;
-        float distX = distFunc(pX, objectId2);
-        float distY = distFunc(pY, objectId2);
-        float distZ = distFunc(pZ, objectId2);
+        float distX = distFunc(pX);
+        float distY = distFunc(pY);
+        float distZ = distFunc(pZ);
 
         // this will give the surface normal for the fragment
         normal = normalize(vec3(distX-nearestDistance, distY-nearestDistance, distZ-nearestDistance));
@@ -317,18 +303,16 @@
       float lightSource = lightMarch(lightPos, -lightDir, length(lightVec), 16.);
 
       // Diffuse
-      float lightIntensity = (objectId == 1 ? OBJ1_LIGHT_INTENSITY : OBJ2_LIGHT_INTENSITY) / dot(lightVec, lightVec);
+      float lightIntensity = LIGHT_INTENSITY / dot(lightVec, lightVec);
       float diffuse = max(dot(normal, lightDir), 0.0);
 
       // Specular
       vec3 viewDir = normalize(vec3(pos.xy, 0.0) - p);
       vec3 reflectDir = reflect(-lightDir, normal);
-      float specular = pow(max(dot(viewDir, reflectDir), 0.0), (objectId == 1 ? OBJ1_MATERIAL_SHINESS : OBJ2_MATERIAL_SHINESS));
+      float specular = pow(max(dot(viewDir, reflectDir), 0.0), MATERIAL_SHINESS);
 
-      vec3 objectColor = objectId == 1 ? OBJ1_COLOR : OBJ2_COLOR;
-      
       float lightness = clamp((specular + diffuse) * lightSource * lightIntensity + LIGHT_AMBIENT, 0.0, 1.0);
-      gl_FragColor = vec4(vec3(lightness) * objectColor, 1.0);
+      gl_FragColor = vec4(lightness, lightness, lightness, 1.0);
     }
   }
   void main(void) {

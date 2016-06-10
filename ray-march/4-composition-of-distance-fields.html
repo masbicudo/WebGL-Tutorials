@@ -7,102 +7,105 @@
     <canvas id="canvas" style="border:none" width="600" height="800" />
 </body>
 <script type="text/javascript">
-    "use strict";
+  "use strict";
 
-    function startWebGLApp() {
-        var gl = getWebGLContext("canvas");
-        var programs = {
-            fragShader: getShader("fragment-shader"),
-            vertexShader: getShader("vertex-shader")
-        };
-        var programParams = initShaders(gl);
-        var shape = createSquare(gl);
-        gl.clearColor(0, 0, 0, 1);
-        draw(gl, shape, programParams);
+  function startWebGLApp() {
+    var gl = getWebGLContext("canvas");
+    var programs = {
+      fragShader: getShader("fragment-shader"),
+      vertexShader: getShader("vertex-shader")
+    };
+    var programParams = initShaders(gl);
+    var shape = createSquare(gl);
+    gl.clearColor(0, 0, 0, 1);
+    draw(gl, shape, programParams);
+  }
+
+  function getWebGLContext(id) {
+    var canvasElement = document.getElementById(id);
+    try {
+      var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+      return gl;
+    }
+    catch(e) {}
+    return;
+  }
+
+  function initShaders(gl) {
+    var fragmentShader = getShader(gl, "fragment-shader");
+    var vertexShader = getShader(gl, "vertex-shader");
+
+    // Creating shader program
+    var shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+      alert("Could not initialize shaders.");
     }
 
-    function getWebGLContext(id) {
-        var canvasElement = document.getElementById(id);
-        try {
-            var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-            return gl;
-        }
-        catch(e) {}
-        return;
-    }
+    gl.useProgram(shaderProgram);
 
-    function initShaders(gl) {
-        var fragmentShader = getShader(gl, "fragment-shader");
-        var vertexShader = getShader(gl, "vertex-shader");
+    var aVertexCoords = gl.getAttribLocation(shaderProgram, "aVertexCoords");
+    gl.enableVertexAttribArray(aVertexCoords);
 
-        // Creating shader program
-        var shaderProgram = gl.createProgram();
-        gl.attachShader(shaderProgram, vertexShader);
-        gl.attachShader(shaderProgram, fragmentShader);
-        gl.linkProgram(shaderProgram);
+    var uTransform = gl.getUniformLocation(shaderProgram, "uTransform");
 
-        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-            alert("Could not initialize shaders.");
-        }
+    return {
+      aVertexCoords: aVertexCoords,
+      uTransform: uTransform
+    };
+  }
 
-        gl.useProgram(shaderProgram);
+  function createSquare(gl) {
+    var squareVertexCoordBuffer = gl.createBuffer();
+    var coorsdArray = [
+      -1,  1, // 1st point
+       1,  1, // 2nd point
+      -1, -1, // 3rd point
+       1, -1  // 4th point
+    ];
+    gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coorsdArray), gl.STATIC_DRAW);
+    return {
+      coordsBuffer: squareVertexCoordBuffer,
+      coorsdArray: coorsdArray,
+      pointCount: 4,
+      pointSize: 2
+    };
+  }
 
-        var aVertexCoords = gl.getAttribLocation(shaderProgram, "aVertexCoords");
-        gl.enableVertexAttribArray(aVertexCoords);
+  function draw(gl, shape, programParams) {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        var uTransform = gl.getUniformLocation(shaderProgram, "uTransform");
+    var ratio = canvas.width / canvas.height;
+    var rx = ratio > 1 ? 1 : ratio;
+    var ry = ratio > 1 ? 1/ratio : 1;
+    var transformMatrix = [
+         rx,   0,   0,   0,
+          0,  ry,   0,   0,
+          0,   0,   1,   0,
+          0,   0,   0,   1
+    ];
+    gl.uniformMatrix4fv(programParams.uTransform, false, transformMatrix);
 
-        return {
-            aVertexCoords: aVertexCoords,
-            uTransform: uTransform
-        };
-    }
+    // setting the current buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, shape.coordsBuffer);
 
-    function createSquare(gl) {
-        var squareVertexCoordBuffer = gl.createBuffer();
-        var coorsdArray = [
-            -1,  1, // 1st point
-             1,  1, // 2nd point
-            -1, -1, // 3rd point
-             1, -1  // 4th point
-        ];
-        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexCoordBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coorsdArray), gl.STATIC_DRAW);
-        return {
-            coordsBuffer: squareVertexCoordBuffer,
-            coorsdArray: coorsdArray,
-            pointCount: 4,
-            pointSize: 2
-        };
-    }
+    // associate attribute 'aVertexCoords' with current buffer
+    gl.vertexAttribPointer(programParams.aVertexCoords, 2, gl.FLOAT, false, 0, 0);
 
-    function draw(gl, shape, programParams) {
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        var transformMatrix = [
-            0.6,   0,   0,   0,
-              0, 0.8,   0,   0,
-              0,   0,   1,   0,
-              0,   0,   0,   1
-        ];
-        gl.uniformMatrix4fv(programParams.uTransform, false, transformMatrix);
-
-        // setting the current buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, shape.coordsBuffer);
-
-        // associate attribute 'aVertexCoords' with current buffer
-        gl.vertexAttribPointer(programParams.aVertexCoords, 2, gl.FLOAT, false, 0, 0);
-
-        // draw triangles, using the shaders of the current program, with the current attributes
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, shape.pointCount);
-    }
+    // draw triangles, using the shaders of the current program, with the current attributes
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, shape.pointCount);
+  }
 
 </script>
 <script id="fragment-shader" type="x-shader/x-fragment">
   precision highp float;
-  const int NUM_STEPS = 128;
-  const float PIX_DIFF = 1./512.;
-  const float DIST_DIFF = 1./1024.;
+  const int MAX_STEPS = 128;
+  const float NORMAL_GRADIENT_DIFF = 1./512.;
+  const float CONTACT_DIFF = 1./1024.;
   const float LIGHT_AMBIENT = 0.075;
   const vec3 LIGHT_POINT = vec3(-1.0, 1.0, -1.0);
   const float MATERIAL_SHINESS = 5.;
@@ -137,15 +140,15 @@
   void mainIterations(void) {
     vec3 p = vec3(pos.xy, 0.0);
     int steps = 0;
-    for (int i = 0; i < NUM_STEPS; i++) {
+    for (int i = 0; i < MAX_STEPS; i++) {
         steps++;
         float dist = distFunc(p);
         p = vec3(p.xy, p.z + dist);
-        if (dist < DIST_DIFF) {
+        if (dist < CONTACT_DIFF) {
             break;
         }
     }
-    gl_FragColor = vec4(vec3(float(steps)/float(NUM_STEPS)), 1.0);
+    gl_FragColor = vec4(vec3(float(steps)/float(MAX_STEPS)), 1.0);
   }
 
   void main(void) {
@@ -154,13 +157,13 @@
     int steps = 0;
     vec3 normal = vec3(0.0, 0.0, 0.0);
     
-    for (int i = 0; i < NUM_STEPS; i++) {
+    for (int i = 0; i < MAX_STEPS; i++) {
         steps++;
         float dist = distFunc(p);
-        if (dist < DIST_DIFF) {
-            vec3 pX = vec3(p.x+PIX_DIFF, p.y, p.z);
-            vec3 pY = vec3(p.x, p.y+PIX_DIFF, p.z);
-            vec3 pZ = vec3(p.x, p.y, p.z+PIX_DIFF);
+        if (dist < CONTACT_DIFF) {
+            vec3 pX = vec3(p.x+NORMAL_GRADIENT_DIFF, p.y, p.z);
+            vec3 pY = vec3(p.x, p.y+NORMAL_GRADIENT_DIFF, p.z);
+            vec3 pZ = vec3(p.x, p.y, p.z+NORMAL_GRADIENT_DIFF);
             float distX = distFunc(pX);
             float distY = distFunc(pY);
             float distZ = distFunc(pZ);
@@ -173,7 +176,7 @@
         p = vec3(p.xy, p.z + dist);
     }
 
-    if (steps == NUM_STEPS) {
+    if (steps == MAX_STEPS) {
       gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     } else {
         // Diffuse
@@ -204,6 +207,6 @@
 
   void main(void) {
     gl_Position = vec4(aVertexCoords, 0.0, 1.0);
-    pos = uTransform * gl_Position * 1.5;
+    pos = uTransform * gl_Position;
   }
 </script>

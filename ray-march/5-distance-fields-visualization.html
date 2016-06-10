@@ -12,8 +12,8 @@
   function startWebGLApp() {
     var gl = getWebGLContext("canvas");
     var programs = {
-        fragShader: getShader("fragment-shader"),
-        vertexShader: getShader("vertex-shader")
+      fragShader: getShader("fragment-shader"),
+      vertexShader: getShader("vertex-shader")
     };
     var programParams = initShaders(gl);
     var shape = createSquare(gl);
@@ -24,8 +24,8 @@
   function getWebGLContext(id) {
     var canvasElement = document.getElementById(id);
     try {
-        var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-        return gl;
+      var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+      return gl;
     }
     catch(e) {}
     return;
@@ -79,11 +79,14 @@
   function draw(gl, shape, programParams) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    var ratio = canvas.width / canvas.height;
+    var rx = ratio > 1 ? 1 : ratio;
+    var ry = ratio > 1 ? 1/ratio : 1;
     var transformMatrix = [
-      0.6,   0,   0,   0,
-        0, 0.8,   0,   0,
-        0,   0,   1,   0,
-        0,   0,   0,   1
+         rx,   0,   0,   0,
+          0,  ry,   0,   0,
+          0,   0,   1,   0,
+          0,   0,   0,   1
     ];
     gl.uniformMatrix4fv(programParams.uTransform, false, transformMatrix);
 
@@ -150,6 +153,6 @@
 
   void main(void) {
     gl_Position = vec4(aVertexCoords, 0.0, 1.0);
-    pos = uTransform * gl_Position * 1.5;
+    pos = uTransform * gl_Position;
   }
 </script>
