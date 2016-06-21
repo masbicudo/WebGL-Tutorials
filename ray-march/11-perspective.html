@@ -128,7 +128,7 @@
   uniform float uTime;
 
   const float PI = 3.14159265359;
-  const float INFINITY = 1./0.;
+  const float LARGE_VALUE = 1e20;
   const float Deg2Rad = 2.*PI/360.;
 
   float map(float value, float low1, float high1, float low2, float high2) {
@@ -257,7 +257,7 @@
 
     float traveledSoFar = 0.;
     float travelToNearest = 0.;
-    float distanceToNearest = INFINITY;
+    float distanceToNearest = LARGE_VALUE;
     for (int i = 0; i < MAX_STEPS; i++) {
       float dist = distFunc(p + traveledSoFar*travelDirection);
       if (dist < distanceToNearest) {
