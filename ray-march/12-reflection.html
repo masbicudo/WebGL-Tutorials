@@ -1,0 +1,339 @@
+<head>
+    <title>#12 Reflection</title>
+    <script type="text/javascript" src="../lib/gl-matrix.js"></script>
+    <script type="text/javascript" src="../lib/mdn-getShader.js"></script>
+</head>
+<body onload="javascript:startWebGLApp()">
+    <canvas id="canvas" style="border:none" width="600" height="800" />
+</body>
+<script type="text/javascript">
+  "use strict";
+
+  function startWebGLApp() {
+    var gl = getWebGLContext("canvas");
+    var programs = {
+      fragShader: getShader("fragment-shader"),
+      vertexShader: getShader("vertex-shader")
+    };
+    var programParams = initShaders(gl);
+    var shape = createSquare(gl);
+    gl.clearColor(0, 0, 0, 1);
+    draw(gl, shape, programParams);
+  }
+
+  function getWebGLContext(id) {
+    var canvasElement = document.getElementById(id);
+    try {
+        var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        return gl;
+    }
+    catch(e) {}
+    return;
+  }
+
+  function initShaders(gl) {
+    var fragmentShader = getShader(gl, "fragment-shader");
+    var vertexShader = getShader(gl, "vertex-shader");
+
+    // Creating shader program
+    var shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+      alert("Could not initialize shaders.");
+    }
+
+    gl.useProgram(shaderProgram);
+
+    var aVertexCoords = gl.getAttribLocation(shaderProgram, "aVertexCoords");
+    gl.enableVertexAttribArray(aVertexCoords);
+
+    var uTransform = gl.getUniformLocation(shaderProgram, "uTransform");
+    var uTime = gl.getUniformLocation(shaderProgram, "uTime");
+
+    return {
+      aVertexCoords: aVertexCoords,
+      uTransform: uTransform,
+      uTime: uTime
+    };
+  }
+
+  function createSquare(gl) {
+    var squareVertexCoordBuffer = gl.createBuffer();
+    var coorsdArray = [
+      -1,  1, // 1st point
+       1,  1, // 2nd point
+      -1, -1, // 3rd point
+       1, -1  // 4th point
+    ];
+    gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coorsdArray), gl.STATIC_DRAW);
+    return {
+      coordsBuffer: squareVertexCoordBuffer,
+      coorsdArray: coorsdArray,
+      pointCount: 4,
+      pointSize: 2
+    };
+  }
+
+  function draw(gl, shape, programParams) {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    var ratio = canvas.width / canvas.height;
+    var rx = ratio > 1 ? 1 : ratio;
+    var ry = ratio > 1 ? 1/ratio : 1;
+    var transformMatrix = [
+         rx,   0,   0,   0,
+          0,  ry,   0,   0,
+          0,   0,   1,   0,
+          0,   0,   0,   1
+    ];
+    gl.uniformMatrix4fv(programParams.uTransform, false, transformMatrix);
+
+    // setting the current buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, shape.coordsBuffer);
+
+    // associate attribute 'aVertexCoords' with current buffer
+    gl.vertexAttribPointer(programParams.aVertexCoords, 2, gl.FLOAT, false, 0, 0);
+
+    var time = 0;
+    var interval = 1000 / 15;
+    window.setInterval(function() {
+
+      gl.uniform1f(programParams.uTime, time * 0.01);
+      time += interval;
+
+      // draw triangles, using the shaders of the current program, with the current attributes
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, shape.pointCount);
+
+    }, interval);
+  }
+
+</script>
+<script id="fragment-shader" type="x-shader/x-fragment">
+  precision highp float;
+  const int MAX_STEPS = 100;
+  const float CONTACT_DIFF = 2./1024.;
+  const float NORMAL_GRADIENT_DIFF = 8./1024./1024.;
+  const float LIGHT_AMBIENT = 0.075;
+  const vec3 LIGHT_POINT = vec3(-3.0, 0.7, -0.7);
+  const float MATERIAL_SHINESS = 5.;
+  const float LIGHT_INTENSITY = 8.;
+
+  varying vec4 pos;
+
+  uniform float uTime;
+
+  const float PI = 3.14159265359;
+  const float INFINITY = 1e20;
+  const float Deg2Rad = 2.*PI/360.;
+
+  float map(float value, float low1, float high1, float low2, float high2) {
+    return low2 + (value - low1) * (high2 - low2) / (high1 - low1);
+  }
+
+  float distCircleNx(float n, vec2 p, vec2 c, float r) {
+    vec2 k = p - c;
+    return pow(pow(abs(k.x), n) + pow(abs(k.y), n), 1./n) - r;
+  }
+  vec2 mapPolarNx(float n, vec3 p) {
+    return vec2(p.x, pow(pow(abs(p.y), n) + pow(abs(p.z), n), 1./n));
+  }
+  float distTorusNxx(float nt, float nc, vec3 p, float rt, float rc) {
+    return distCircleNx(nc, mapPolarNx(nt, p), vec2(0., rt), rc);
+  }
+
+  vec3 rotateAroundY(vec3 v, float a) {
+    float c_a = cos(a);
+    float s_a = sin(a);
+    mat4 T = mat4(
+      c_a, 0.0, s_a, 0.0,
+      0.0, 1.0, 0.0, 0.0,
+     -s_a, 0.0, c_a, 0.0,
+      0.0, 0.0, 0.0, 1.0
+      );
+    return (T * vec4(v, 1.0)).xyz;
+  }
+  vec3 rotateAroundX(vec3 v, float a) {
+    float c_a = cos(a);
+    float s_a = sin(a);
+    mat4 T = mat4(
+      1.0, 0.0, 0.0, 0.0,
+      0.0, c_a,-s_a, 0.0,
+      0.0, s_a, c_a, 0.0,
+      0.0, 0.0, 0.0, 1.0
+      );
+    return (T * vec4(v, 1.0)).xyz;
+  }
+  vec3 translate(vec3 v, vec3 d) {
+    mat4 T = mat4(
+      1.0, 0.0, 0.0, 0.0,
+      0.0, 1.0, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0,
+      d.x, d.y, d.z, 1.0
+    );
+    return (T * vec4(v, 1.0)).xyz;
+  }
+
+  float distFunc(vec3 v) {
+    v = translate(v, vec3(0.,0.,-1.));
+    v = rotateAroundX(v, (uTime*1. + 60.)*Deg2Rad);
+    v = rotateAroundY(v, (uTime*1. + 30.)*Deg2Rad);
+
+    vec3 v1 = v;
+    v1 = translate(v1, vec3(0.,0.275,0.));
+    v1 = rotateAroundX(v1, 90.*Deg2Rad);
+    v1 = rotateAroundY(v1, 0.*Deg2Rad);
+    float d1 = distTorusNxx(2., 2., v1, 0.4, 0.1);
+
+    vec3 v2 = v;
+    v2 = translate(v2, vec3(0.,-0.275,0.0));
+    v2 = rotateAroundX(v2, -0.*Deg2Rad);
+    v2 = rotateAroundY(v2, -90.*Deg2Rad);
+    float d2 = distTorusNxx(10., 10., v2, 0.4, 0.1);
+
+    return min(d1, d2);
+  }
+
+  void mainIterations(void) {
+    vec3 p = vec3(pos.xy, 0.0);
+    int steps = 0;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        steps++;
+        float dist = distFunc(p);
+        p = vec3(p.xy, p.z + dist);
+        if (dist < NORMAL_GRADIENT_DIFF) {
+            break;
+        }
+    }
+    gl_FragColor = vec4(vec3(float(steps)/float(MAX_STEPS)), 1.0);
+  }
+  void mainDepth(float minDepth, float maxDepth) {
+    vec3 p = vec3(pos.xy, 0.0);
+    int steps = 0;
+    for (int i = 0; i < MAX_STEPS; i++) {
+        steps++;
+        float dist = distFunc(p);
+        p = vec3(p.xy, p.z + dist);
+        if (dist < NORMAL_GRADIENT_DIFF) {
+            break;
+        }
+    }
+    gl_FragColor = vec4(vec3(map(p.z, minDepth, maxDepth, 1., 0.)), 1.0);
+  }
+
+  struct raymarchResult {
+    vec4 color;
+    vec3 position;
+    vec3 normal;
+    int id;
+  };
+
+  // returns the color of the object hit by
+  // raymarching from a source in a given direction
+  // without considering reflection
+  raymarchResult raymarchOnce(vec3 origin, vec3 travelDirection) {
+    vec3 p = origin;
+    vec3 normal = vec3(0.0, 0.0, 0.0);
+
+    float traveledSoFar = 0.;
+    float travelToNearest = 0.;
+    float distanceToNearest = INFINITY;
+    for (int i = 0; i < MAX_STEPS; i++) {
+      float dist = distFunc(p + traveledSoFar*travelDirection);
+      if (dist < distanceToNearest) {
+        distanceToNearest = dist;
+        travelToNearest = traveledSoFar;
+      }
+      if (dist < CONTACT_DIFF)
+        break;
+      if (traveledSoFar > 2.)
+        break;
+      traveledSoFar += dist;
+    }
+
+    raymarchResult r;
+    if (traveledSoFar > 2.) {
+      r.color = vec4(0.0, 0.0, 0.0, 1.0);
+      r.position = vec3(0.);
+      r.normal = vec3(0.);
+      r.id = 0;
+      return r;
+    } else {
+        p += traveledSoFar*travelDirection;
+        if (distanceToNearest < CONTACT_DIFF) {
+          vec3 pX = vec3(p.x+NORMAL_GRADIENT_DIFF, p.y, p.z);
+          vec3 pY = vec3(p.x, p.y+NORMAL_GRADIENT_DIFF, p.z);
+          vec3 pZ = vec3(p.x, p.y, p.z+NORMAL_GRADIENT_DIFF);
+          float distX = distFunc(pX);
+          float distY = distFunc(pY);
+          float distZ = distFunc(pZ);
+
+          // this will give the surface normal for the fragment
+          normal = normalize(vec3(
+            distX-distanceToNearest,
+            distY-distanceToNearest,
+            distZ-distanceToNearest));
+        }
+
+        vec3 lightPos = LIGHT_POINT;
+        vec3 lightVec = (lightPos - p);
+        vec3 lightDir = normalize(lightVec);
+
+        // Diffuse
+        float lightIntensity = LIGHT_INTENSITY / dot(lightVec, lightVec);
+        float diffuse = max(dot(normal, lightDir), 0.0);
+
+        // Specular
+        vec3 viewDir = normalize(vec3(pos.xy, 0.0) - p);
+        vec3 reflectDir = reflect(-lightDir, normal);
+        float specular = pow(max(dot(viewDir, reflectDir), 0.0), MATERIAL_SHINESS);
+
+        float lightness = clamp((specular + diffuse) * lightIntensity + LIGHT_AMBIENT, 0.0, 1.0);
+
+        r.color = vec4(lightness, lightness, lightness, 1.0);
+        r.position = p;
+        r.normal = normal;
+        r.id = 1;
+        return r;
+    }
+  }
+  void mainShaded(void) {
+    vec3 origin = vec3(pos.xy, 0.0);
+    vec3 direction = vec3(0.0, 0.0, 1.0);
+    raymarchResult rm = raymarchOnce(
+		origin,
+		direction);
+
+    // reflection
+    raymarchResult rmR;
+    if (rm.id > 0) {
+	  vec3 reflectDir = reflect(direction, rm.normal);
+	  rmR = raymarchOnce(
+		rm.position + normalize(reflectDir)*CONTACT_DIFF*2.,
+		reflectDir);
+    }
+    else {
+	  rmR = raymarchResult(vec4(0.0), vec3(0.0), vec3(0.0), 0);
+    }
+
+    gl_FragColor = rm.color + rmR.color;
+  }
+  void main(void) {
+    //mainDepth(0.5, 1.5); return;
+    //mainIterations(); return;
+    mainShaded(); return;
+  }
+</script>
+<script id="vertex-shader" type="x-shader/x-vertex">
+  attribute vec2 aVertexCoords;
+  varying vec4 pos;
+  uniform mat4 uTransform;
+
+  void main(void) {
+    gl_Position = vec4(aVertexCoords, 0.0, 1.0);
+    pos = uTransform * gl_Position;
+  }
+</script>
