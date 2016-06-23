@@ -3,27 +3,61 @@
     <script type="text/javascript" src="../lib/gl-matrix.js"></script>
     <script type="text/javascript" src="../lib/mdn-getShader.js"></script>
     <script type="text/javascript" src="../lib/leaf-draw.js"></script>
+    <style>
+      div.row {
+         padding: 2px;
+      }
+      div.row > div.row {
+         margin-left: 10px;
+      }
+      div.group {
+         font-weight: bold;
+      }
+      input[type="textbox"] {
+         width: 8em;
+      }
+      input.small {
+         width: 4em;
+      }
+    </style>
 </head>
 <body>
-  <div><canvas id="canvas" style="border:none" width="600" height="800" /></div>
-  <div id="txt">0</div>
-  <div><span>Texture Settings</span></div>
-  <div><span>cnoise</span><input id="uCnoise" type="checkbox" /></div>
-  <div><span>snoise</span><input id="uSnoise" type="checkbox" checked="checked" /></div>
-  <div><span>noise-mul</span><input id="uNoiseMul" type="textbox" value="1" /></div>
-  <div><span>noise-z</span><input id="uNoiseZ" type="textbox" value="0" /></div>
-  <div><span>noise-zmul</span><input id="uNoiseZMul" type="textbox" value="0.1" /></div>
-  <div><span>noise-zoom</span><input id="uNoiseZoom" type="textbox" value="12" /></div>
-  <div><span>angle</span><input id="uAngle" type="textbox" value="9" /></div>
-  <div><span>shear</span><input id="uShear" type="textbox" value="1" /></div>
-  <div><span>zoom</span><input id="uZoom" type="textbox" value="100" /></div>
-  <div><span>translate</span>
-    <input id="uX" type="textbox" value="0" />
-    <input id="uY" type="textbox" value="0" />
-    <input id="uZ" type="textbox" value="0.8" />
+  <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
+  <div style="display: inline-block;">
+     <div id="txt">0</div>
+     <div class="row"><div class="group">Texture Settings</div>
+        <div class="row"><label for="uCnoise">cnoise</label> <input id="uCnoise" type="checkbox" checked="checked" /></div>
+        <div class="row"><label for="uSnoise">snoise</label> <input id="uSnoise" type="checkbox" /></div>
+        <div class="row"><label for="uNoiseMul">noise-mul</label> <input id="uNoiseMul" type="textbox" value="1" /></div>
+        <div class="row"><label for="uNoiseZ">noise-z</label> <input id="uNoiseZ" type="textbox" value="0" /></div>
+        <div class="row"><label for="uNoiseZMul">noise-zmul</label> <input id="uNoiseZMul" type="textbox" value="0.1" /></div>
+        <div class="row"><label for="uNoiseZoom">noise-zoom</label> <input id="uNoiseZoom" type="textbox" value="3" /></div>
+        <div class="row"><label for="uAngle">angle</label> <input id="uAngle" type="textbox" value="9" /></div>
+        <div class="row"><label for="uZoom">zoom</label> <input id="uZoom" type="textbox" value="100" /></div>
+        <div class="row"><div class="group">rings</div>
+           <div class="row">
+             <span>distance:</span>
+             <label for="uDistanceDecay">decay power</label> <input id="uDistanceDecay" type="textbox" value="2" />
+             <label for="uDistanceFactor">factor</label> <input id="uDistanceFactor" type="textbox" value="0.1" />
+           </div>
+           <div class="row">
+             <span>wave:</span>
+             <label for="uShear">shearing</span>  <input class="small" id="uShear" type="textbox" value="1" />
+             <label for="uWavePower">power</span> <input class="small" id="uWavePower" type="textbox" value="1" />
+             <label for="uWaveNoise">noise</span> <input class="small" id="uWaveNoise" type="textbox" value="0" />
+           </div>
+        </div>
+        <div class="row"><span>translate: </span>
+          <label for="uX">x</label> <input class="small" id="uX" type="textbox" value="0" />
+          <label for="uY">y</label> <input class="small" id="uY" type="textbox" value="0" />
+          <label for="uZ">z</label> <input class="small" id="uZ" type="textbox" value="0.8" />
+        </div>
+      </div>
   </div>
 </body>
 <script type="text/javascript">
+  // http://luthuli.cs.uiuc.edu/~daf/courses/computergraphics/week8/shading.pdf
+  // http://www.digitaltutors.com/forum/entry.php?147-Creating-Realistic-Wood-Texture-in-Maya-using-only-Procedural-Textures
   function startWebGLApp2() {
     startWebGLApp({
       uCnoise: {type: "bool"},
@@ -37,7 +71,11 @@
       uNoiseZMul: {type: "float"},
       uNoiseZoom: {type: "float"},
       uShear: {type: "float"},
+      uWavePower: {type: "float"},
+      uWaveNoise: {type: "float"},
       uZoom: {type: "float"},
+      uDistanceDecay: {type: "float"},
+      uDistanceFactor: {type: "float"}
     });
   }
   if(window.addEventListener) {
@@ -63,7 +101,11 @@
   uniform float uNoiseZMul;
   uniform float uNoiseZoom;
   uniform float uShear;
+  uniform float uWavePower;
+  uniform float uWaveNoise;
   uniform float uZoom;
+  uniform float uDistanceDecay;
+  uniform float uDistanceFactor;
 
   // https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
   vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
@@ -225,14 +267,22 @@
     return (T * vec4(v, 1.0)).xyz;
   }
 
-  float distFunc(vec3 v) {
-    float x = length(v.xy)*PI*10.0-0.0;
-    if (uSnoise) x = x + uNoiseMul*snoise(vec3(v.xy, uNoiseZ+uNoiseZMul*v.z)*uNoiseZoom);
-    if (uCnoise) x = x + uNoiseMul*cnoise(vec3(v.xy, uNoiseZ+uNoiseZMul*v.z)*uNoiseZoom);
+  float noise(vec3 v) {
+    float noise = 1.0;
+    if (uSnoise) noise = noise*snoise(v);
+    if (uCnoise) noise = noise*cnoise(v);
+    return noise;
+  }
+  float woodTexture(vec3 v) {
+    float x = length(v.xy)*PI;
+    x = pow(x, uDistanceDecay);
+    x += uNoiseMul*noise(vec3(v.xy, uNoiseZ+uNoiseZMul*v.z)*uNoiseZoom);
+    x = x/uDistanceFactor;
     float y = cos(x);
     for(int i = 0; i < 4; i++)
       y = cos(x-uShear*y);
-    return y*0.5+0.5;
+    y = pow(clamp(y*0.5+0.5, 0.0, 1.0), uWavePower);
+    return mix(y, noise(vec3(x)), uWaveNoise);
   }
 
   vec3 translate(vec3 v, vec3 d) {
@@ -245,11 +295,19 @@
     return (T * vec4(v, 1.0)).xyz;
   }
 
+  vec3 woodColorPalette(float x, float n) {
+    vec3 midColor = vec3(0.275, 0.039, 0.008);
+    vec3 lightColor = vec3(0.412, 0.140, 0.067);
+    vec3 darkColor = midColor*0.5;
+    
+    return mix(midColor, mix(darkColor, lightColor, clamp(2.0*n, 0.0, 1.0)), x);
+  }
+
   void main(void) {
     vec3 p = vec3(pos.xy/uZoom/0.01, 0.0);
     p = translate(p, vec3(uX, uY, uZ));
     p = rotateAroundY(p, uAngle/360.0*2.0*PI);
-    vec3 color = vec3(distFunc(p));
+    vec3 color = woodColorPalette(woodTexture(p), woodTexture(rotateAroundY(p/3.0, 0.25*PI)));
     gl_FragColor = vec4(color, 1.0);
   }
 </script>
