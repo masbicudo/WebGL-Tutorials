@@ -1,0 +1,546 @@
+<head>
+    <title>#15 Solid Texturing</title>
+    <script type="text/javascript" src="../lib/gl-matrix.js"></script>
+    <script type="text/javascript" src="../lib/mdn-getShader.js"></script>
+    <script type="text/javascript" src="../lib/leaf-draw.js"></script>
+</head>
+<body onload="javascript:startWebGLApp()">
+    <div><canvas id="canvas" style="border:none" width="600" height="800" /></div>
+    <div id="txt">0</div>
+</body>
+<script type="text/javascript">
+  "use strict";
+
+  function startWebGLApp() {
+    var gl = getWebGLContext("canvas");
+    var programs = {
+      fragShader: getShader("fragment-shader"),
+      vertexShader: getShader("vertex-shader")
+    };
+    var programParams = initShaders(gl);
+    var shape = createSquare(gl);
+    gl.clearColor(0, 0, 0, 1);
+    draw(gl, shape, programParams);
+  }
+
+  function getWebGLContext(id) {
+    var canvasElement = document.getElementById(id);
+    try {
+        var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        return gl;
+    }
+    catch(e) {}
+    return;
+  }
+
+  function initShaders(gl) {
+    var fragmentShader = getShader(gl, "fragment-shader");
+    var vertexShader = getShader(gl, "vertex-shader");
+
+    // Creating shader program
+    var shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+      alert("Could not initialize shaders.");
+    }
+
+    gl.useProgram(shaderProgram);
+
+    var aVertexCoords = gl.getAttribLocation(shaderProgram, "aVertexCoords");
+    gl.enableVertexAttribArray(aVertexCoords);
+
+    var uTransform = gl.getUniformLocation(shaderProgram, "uTransform");
+    var uTime = gl.getUniformLocation(shaderProgram, "uTime");
+
+    return {
+      aVertexCoords: aVertexCoords,
+      uTransform: uTransform,
+      uTime: uTime
+    };
+  }
+
+  function createSquare(gl) {
+    var squareVertexCoordBuffer = gl.createBuffer();
+    var coorsdArray = [
+      -1,  1, // 1st point
+       1,  1, // 2nd point
+      -1, -1, // 3rd point
+       1, -1  // 4th point
+    ];
+    gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coorsdArray), gl.STATIC_DRAW);
+    return {
+      coordsBuffer: squareVertexCoordBuffer,
+      coorsdArray: coorsdArray,
+      pointCount: 4,
+      pointSize: 2
+    };
+  }
+
+  function draw(gl, shape, programParams) {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    var ratio = canvas.width / canvas.height;
+    var rx = ratio > 1 ? 1 : ratio;
+    var ry = ratio > 1 ? 1/ratio : 1;
+    var transformMatrix = [
+         rx,   0,   0,   0,
+          0,  ry,   0,   0,
+          0,   0,   1,   0,
+          0,   0,   0,   1
+    ];
+    gl.uniformMatrix4fv(programParams.uTransform, false, transformMatrix);
+
+    // setting the current buffer
+    gl.bindBuffer(gl.ARRAY_BUFFER, shape.coordsBuffer);
+
+    // associate attribute 'aVertexCoords' with current buffer
+    gl.vertexAttribPointer(programParams.aVertexCoords, 2, gl.FLOAT, false, 0, 0);
+
+    var time = 0;
+    var interval = 1000 / 15;
+    window.setInterval(function() {
+
+      gl.uniform1f(programParams.uTime, time * 0.01);
+      time += interval;
+      
+      txt.innerHTML = time.toFixed(0);
+
+      // draw triangles, using the shaders of the current program, with the current attributes
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, shape.pointCount);
+
+    }, interval);
+  }
+
+</script>
+<script id="fragment-shader" type="x-shader/x-fragment">
+  precision highp float;
+  const int MAX_STEPS = 120;
+  const float CONTACT_DIFF = 0.25/1024.;
+  const float NORMAL_GRADIENT_DIFF = 32./1024./1024.;
+  const float LIGHT_AMBIENT = 0.15;
+  const vec3 LIGHT_POINT = vec3(-3.0, 0.7, -0.7);
+
+  const float OBJ1_MATERIAL_SHINESS = 20.;
+  const float OBJ1_LIGHT_INTENSITY = 12.;
+  const vec3 OBJ1_COLOR = vec3(1.0, 0.5, 0.5);
+
+  const float OBJ2_MATERIAL_SHINESS = 0.4;
+  const float OBJ2_LIGHT_INTENSITY = 6.;
+  const vec3 OBJ2_COLOR = vec3(0.5, 1.0, 0.5);
+
+  varying vec4 pos;
+
+  uniform float uTime;
+
+  bool uCnoise = false;
+  bool uSnoise = true;
+  float uAngle = 9.0;
+  float uX = 0.0;
+  float uY = 0.0;
+  float uZ = 0.0;
+  float uNoiseMul = 2.0;
+  float uNoiseZ = 0.0;
+  float uNoiseZMul = 1.0;
+  float uNoiseZoom = 2.0;
+  float uShear = 1.0;
+  float uWavePower = 1.0;
+  float uWaveNoise = 0.0;
+  float uZoom = 10.0;
+  float uDistanceDecay = 2.0;
+  float uDistanceFactor = 2.0;
+
+  const float PI = 3.14159265359;
+  const float Deg2Rad = 2.*PI/360.;
+
+  float map(float value, float low1, float high1, float low2, float high2) {
+    return low2 + (value - low1) * (high2 - low2) / (high1 - low1);
+  }
+
+  float distCircleNx(float n, vec2 p, vec2 c, float r) {
+    vec2 k = p - c;
+    return pow(pow(abs(k.x), n) + pow(abs(k.y), n), 1./n) - r;
+  }
+  vec2 mapPolarNx(float n, vec3 p) {
+    return vec2(p.x, pow(pow(abs(p.y), n) + pow(abs(p.z), n), 1./n));
+  }
+  float distTorusNxx(float nt, float nc, vec3 p, float rt, float rc) {
+    return distCircleNx(nc, mapPolarNx(nt, p), vec2(0., rt), rc);
+  }
+
+  vec3 rotateAroundY(vec3 v, float a) {
+    float c_a = cos(a);
+    float s_a = sin(a);
+    mat4 T = mat4(
+      c_a, 0.0, s_a, 0.0,
+      0.0, 1.0, 0.0, 0.0,
+     -s_a, 0.0, c_a, 0.0,
+      0.0, 0.0, 0.0, 1.0
+      );
+    return (T * vec4(v, 1.0)).xyz;
+  }
+  vec3 rotateAroundX(vec3 v, float a) {
+    float c_a = cos(a);
+    float s_a = sin(a);
+    mat4 T = mat4(
+      1.0, 0.0, 0.0, 0.0,
+      0.0, c_a,-s_a, 0.0,
+      0.0, s_a, c_a, 0.0,
+      0.0, 0.0, 0.0, 1.0
+      );
+    return (T * vec4(v, 1.0)).xyz;
+  }
+  vec3 translate(vec3 v, vec3 d) {
+    mat4 T = mat4(
+      1.0, 0.0, 0.0, 0.0,
+      0.0, 1.0, 0.0, 0.0,
+      0.0, 0.0, 1.0, 0.0,
+      d.x, d.y, d.z, 1.0
+      );
+    return (T * vec4(v, 1.0)).xyz;
+  }
+  vec3 scale(vec3 v, vec3 s) {
+    mat4 T = mat4(
+      s.x, 0.0, 0.0, 0.0,
+      0.0, s.y, 0.0, 0.0,
+      0.0, 0.0, s.z, 0.0,
+      0.0, 0.0, 0.0, 1.0
+      );
+    return (T * vec4(v, 1.0)).xyz;
+  }
+
+  float distFunc(vec3 v, out int objectId, out vec3 contactPos) {
+    v = translate(v, vec3(0.,0.,-1.));
+    v = rotateAroundX(v, (uTime*1. + 60.)*Deg2Rad);
+    v = rotateAroundY(v, (uTime*1. + 30.)*Deg2Rad);
+
+    vec3 v1 = v;
+    v1 = translate(v1, vec3(0.,0.275,0.));
+    v1 = rotateAroundX(v1, 90.*Deg2Rad);
+    v1 = rotateAroundY(v1, 0.*Deg2Rad);
+    float d1 = distTorusNxx(2., 2., v1, 0.4, 0.1);
+
+    vec3 v2 = v;
+    v2 = translate(v2, vec3(0.,-0.275,0.0));
+    v2 = rotateAroundX(v2, -0.*Deg2Rad);
+    v2 = rotateAroundY(v2, -90.*Deg2Rad);
+    float d2 = distTorusNxx(10., 10., v2, 0.4, 0.1);
+
+    if (d1 < d2) {
+      objectId = 1;
+      contactPos = v1;
+    }
+    else {
+      objectId = 2;
+      contactPos = v2;
+    }
+    return min(d1, d2);
+  }
+
+  float lightMarch(in vec3 origin, in vec3 direction, float maxTravel, float spread) {
+    float traveled = 0.;
+    int steps = 0;
+    float res = 0.9;
+    float prevDist = 1000.0;
+    int objectId;
+    vec3 contactPos;
+    for (int i = 0; i < MAX_STEPS; i++) {
+      steps++;
+      float dist = distFunc(origin + traveled*direction, objectId, contactPos);
+      if (dist < CONTACT_DIFF)
+        break;
+      if (dist >= prevDist)
+        res = min(res, spread*prevDist/(maxTravel - traveled));
+      traveled = traveled + dist;
+      if (traveled >= maxTravel)
+        break;
+      prevDist = dist;
+    }
+    if (maxTravel - traveled >= CONTACT_DIFF * 32.) {
+      return 0.1;
+    }
+    else {
+      return 0.1 + res;
+    }
+  }
+
+  // https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
+  vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
+  vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
+  vec3 fade(vec3 t) {return t*t*t*(t*(t*6.0-15.0)+10.0);}
+
+  //  Simplex 3D Noise 
+  //  by Ian McEwan, Ashima Arts
+  //
+  float snoise(vec3 v){ 
+    const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+    const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+
+  // First corner
+    vec3 i  = floor(v + dot(v, C.yyy) );
+    vec3 x0 =   v - i + dot(i, C.xxx) ;
+
+  // Other corners
+    vec3 g = step(x0.yzx, x0.xyz);
+    vec3 l = 1.0 - g;
+    vec3 i1 = min( g.xyz, l.zxy );
+    vec3 i2 = max( g.xyz, l.zxy );
+
+    //  x0 = x0 - 0. + 0.0 * C 
+    vec3 x1 = x0 - i1 + 1.0 * C.xxx;
+    vec3 x2 = x0 - i2 + 2.0 * C.xxx;
+    vec3 x3 = x0 - 1. + 3.0 * C.xxx;
+
+  // Permutations
+    i = mod(i, 289.0 ); 
+    vec4 p = permute( permute( permute( 
+               i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+             + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) 
+             + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+
+  // Gradients
+  // ( N*N points uniformly over a square, mapped onto an octahedron.)
+    float n_ = 1.0/7.0; // N=7
+    vec3  ns = n_ * D.wyz - D.xzx;
+
+    vec4 j = p - 49.0 * floor(p * ns.z *ns.z);  //  mod(p,N*N)
+
+    vec4 x_ = floor(j * ns.z);
+    vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)
+
+    vec4 x = x_ *ns.x + ns.yyyy;
+    vec4 y = y_ *ns.x + ns.yyyy;
+    vec4 h = 1.0 - abs(x) - abs(y);
+
+    vec4 b0 = vec4( x.xy, y.xy );
+    vec4 b1 = vec4( x.zw, y.zw );
+
+    vec4 s0 = floor(b0)*2.0 + 1.0;
+    vec4 s1 = floor(b1)*2.0 + 1.0;
+    vec4 sh = -step(h, vec4(0.0));
+
+    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+
+    vec3 p0 = vec3(a0.xy,h.x);
+    vec3 p1 = vec3(a0.zw,h.y);
+    vec3 p2 = vec3(a1.xy,h.z);
+    vec3 p3 = vec3(a1.zw,h.w);
+
+  //Normalise gradients
+    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+    p0 *= norm.x;
+    p1 *= norm.y;
+    p2 *= norm.z;
+    p3 *= norm.w;
+
+  // Mix final noise value
+    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+    m = m * m;
+    return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1), 
+                                  dot(p2,x2), dot(p3,x3) ) );
+  }
+
+  //  Classic Perlin 3D Noise 
+  //  by Stefan Gustavson
+  //
+  float cnoise(vec3 P){
+    vec3 Pi0 = floor(P); // Integer part for indexing
+    vec3 Pi1 = Pi0 + vec3(1.0); // Integer part + 1
+    Pi0 = mod(Pi0, 289.0);
+    Pi1 = mod(Pi1, 289.0);
+    vec3 Pf0 = fract(P); // Fractional part for interpolation
+    vec3 Pf1 = Pf0 - vec3(1.0); // Fractional part - 1.0
+    vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);
+    vec4 iy = vec4(Pi0.yy, Pi1.yy);
+    vec4 iz0 = Pi0.zzzz;
+    vec4 iz1 = Pi1.zzzz;
+
+    vec4 ixy = permute(permute(ix) + iy);
+    vec4 ixy0 = permute(ixy + iz0);
+    vec4 ixy1 = permute(ixy + iz1);
+
+    vec4 gx0 = ixy0 / 7.0;
+    vec4 gy0 = fract(floor(gx0) / 7.0) - 0.5;
+    gx0 = fract(gx0);
+    vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);
+    vec4 sz0 = step(gz0, vec4(0.0));
+    gx0 -= sz0 * (step(0.0, gx0) - 0.5);
+    gy0 -= sz0 * (step(0.0, gy0) - 0.5);
+
+    vec4 gx1 = ixy1 / 7.0;
+    vec4 gy1 = fract(floor(gx1) / 7.0) - 0.5;
+    gx1 = fract(gx1);
+    vec4 gz1 = vec4(0.5) - abs(gx1) - abs(gy1);
+    vec4 sz1 = step(gz1, vec4(0.0));
+    gx1 -= sz1 * (step(0.0, gx1) - 0.5);
+    gy1 -= sz1 * (step(0.0, gy1) - 0.5);
+
+    vec3 g000 = vec3(gx0.x,gy0.x,gz0.x);
+    vec3 g100 = vec3(gx0.y,gy0.y,gz0.y);
+    vec3 g010 = vec3(gx0.z,gy0.z,gz0.z);
+    vec3 g110 = vec3(gx0.w,gy0.w,gz0.w);
+    vec3 g001 = vec3(gx1.x,gy1.x,gz1.x);
+    vec3 g101 = vec3(gx1.y,gy1.y,gz1.y);
+    vec3 g011 = vec3(gx1.z,gy1.z,gz1.z);
+    vec3 g111 = vec3(gx1.w,gy1.w,gz1.w);
+
+    vec4 norm0 = taylorInvSqrt(vec4(dot(g000, g000), dot(g010, g010), dot(g100, g100), dot(g110, g110)));
+    g000 *= norm0.x;
+    g010 *= norm0.y;
+    g100 *= norm0.z;
+    g110 *= norm0.w;
+    vec4 norm1 = taylorInvSqrt(vec4(dot(g001, g001), dot(g011, g011), dot(g101, g101), dot(g111, g111)));
+    g001 *= norm1.x;
+    g011 *= norm1.y;
+    g101 *= norm1.z;
+    g111 *= norm1.w;
+
+    float n000 = dot(g000, Pf0);
+    float n100 = dot(g100, vec3(Pf1.x, Pf0.yz));
+    float n010 = dot(g010, vec3(Pf0.x, Pf1.y, Pf0.z));
+    float n110 = dot(g110, vec3(Pf1.xy, Pf0.z));
+    float n001 = dot(g001, vec3(Pf0.xy, Pf1.z));
+    float n101 = dot(g101, vec3(Pf1.x, Pf0.y, Pf1.z));
+    float n011 = dot(g011, vec3(Pf0.x, Pf1.yz));
+    float n111 = dot(g111, Pf1);
+
+    vec3 fade_xyz = fade(Pf0);
+    vec4 n_z = mix(vec4(n000, n100, n010, n110), vec4(n001, n101, n011, n111), fade_xyz.z);
+    vec2 n_yz = mix(n_z.xy, n_z.zw, fade_xyz.y);
+    float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x); 
+    return 2.2 * n_xyz;
+  }
+
+  float noise(vec3 v) {
+    float noise = 1.0;
+    if (uSnoise) noise = noise*snoise(v);
+    if (uCnoise) noise = noise*cnoise(v);
+    return noise;
+  }
+  float woodTexture(vec3 v) {
+    float x = length(v.xy)*PI;
+    x = pow(x, uDistanceDecay);
+    x += uNoiseMul*noise(vec3(v.xy, uNoiseZ+uNoiseZMul*v.z)*uNoiseZoom);
+    x = x/uDistanceFactor;
+    float y = cos(x);
+    for(int i = 0; i < 4; i++)
+      y = cos(x-uShear*y);
+    y = pow(clamp(y*0.5+0.5, 0.0, 1.0), uWavePower);
+    return mix(y, noise(vec3(x)), uWaveNoise);
+  }
+
+  vec3 woodColorPalette1(float x, float n) {
+    vec3 midColor = vec3(0.275, 0.039, 0.008);
+    vec3 lightColor = vec3(0.412, 0.140, 0.067);
+    vec3 darkColor = midColor*0.75;
+    return mix(midColor, mix(darkColor, lightColor, clamp(2.0*n, 0.0, 1.0)), x);
+  }
+
+  vec4 woodTexture1(vec3 p) {
+    p = p/uZoom*0.8*100.0;
+    p = translate(p, vec3(uX, uY, uZ));
+    p = rotateAroundY(p, uAngle/360.0*2.0*PI);
+    vec3 color = woodColorPalette1(woodTexture(p), woodTexture(rotateAroundY(p/3.3, 0.25*PI)));
+    return vec4(color, 1.0);
+  }
+
+  vec3 woodColorPalette2(float x, float n) {
+    vec3 midColor = vec3(0.275, 0.198, 0.102);
+    vec3 lightColor = vec3(0.412, 0.350, 0.180);
+    vec3 darkColor = midColor*0.85;
+    return mix(midColor, mix(darkColor, lightColor, clamp(2.0*n, 0.0, 1.0)), x);
+  }
+
+  vec4 woodTexture2(vec3 p) {
+    p = p/uZoom*0.9*100.0;
+    p = translate(p, vec3(uX, uY, uZ));
+    p = rotateAroundY(p, (uAngle+20.0)/360.0*2.0*PI);
+    vec3 color = woodColorPalette2(woodTexture(p), woodTexture(rotateAroundY(p/3.0, 0.55*PI)));
+    return vec4(color, 1.0);
+  }
+
+  void mainShaded(void) {
+    vec3 p = vec3(pos.xy, 0.0);
+    int steps = 0;
+    vec3 normal = vec3(0.0, 0.0, 0.0);
+    float nearestDistance = 1000.;
+    float travelToNearest = 0.;
+    int objectId;
+    vec3 contactPos;
+    for (int i = 0; i < MAX_STEPS; i++) {
+      steps++;
+      float dist = distFunc(p, objectId, contactPos);
+      if (dist < nearestDistance) {
+        nearestDistance = dist;
+        travelToNearest = p.z;
+      }
+      if (p.z > 2.)
+        break;
+      if (dist < CONTACT_DIFF)
+        break;
+      p = vec3(p.xy, p.z + dist);
+    }
+    
+    if (p.z > 2.) {
+      gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    } else {
+      p = vec3(pos.xy, travelToNearest);
+
+      if (nearestDistance < CONTACT_DIFF || steps == MAX_STEPS) {
+        vec3 pX = vec3(p.x+NORMAL_GRADIENT_DIFF, p.y, p.z);
+        vec3 pY = vec3(p.x, p.y+NORMAL_GRADIENT_DIFF, p.z);
+        vec3 pZ = vec3(p.x, p.y, p.z+NORMAL_GRADIENT_DIFF);
+        int objectId2;
+        vec3 contactPos2;
+        float distX = distFunc(pX, objectId2, contactPos2);
+        float distY = distFunc(pY, objectId2, contactPos2);
+        float distZ = distFunc(pZ, objectId2, contactPos2);
+
+        // this will give the surface normal for the fragment
+        normal = normalize(vec3(distX-nearestDistance, distY-nearestDistance, distZ-nearestDistance));
+      }
+
+      vec3 lightPos = LIGHT_POINT;
+      vec3 lightVec = (lightPos - p);
+      vec3 lightDir = normalize(lightVec);
+
+      // march from the light to the point p
+      // if any body is found, then there is no light
+      // if the light passes near a body, then there is partial light
+      float lightSource = lightMarch(lightPos, -lightDir, length(lightVec), 16.);
+
+      // Diffuse
+      float lightIntensity = (objectId == 1 ? OBJ1_LIGHT_INTENSITY : OBJ2_LIGHT_INTENSITY) / dot(lightVec, lightVec);
+      float diffuse = max(dot(normal, lightDir), 0.0);
+
+      // Specular
+      vec3 viewDir = normalize(vec3(pos.xy, 0.0) - p);
+      vec3 reflectDir = reflect(-lightDir, normal);
+      float specular = pow(max(dot(viewDir, reflectDir), 0.0), (objectId == 1 ? OBJ1_MATERIAL_SHINESS : OBJ2_MATERIAL_SHINESS));
+
+      vec4 objectColor = objectId == 1 ?
+        woodTexture1(contactPos):
+        woodTexture2(contactPos);
+      
+      float lightness = clamp((specular + diffuse) * lightSource * lightIntensity + LIGHT_AMBIENT, 0.0, 2.0);
+      gl_FragColor = vec4(vec3(lightness) * objectColor.rgb, 1.0);
+    }
+  }
+  void main(void) {
+    mainShaded(); return;
+  }
+</script>
+<script id="vertex-shader" type="x-shader/x-vertex">
+  attribute vec2 aVertexCoords;
+  varying vec4 pos;
+  uniform mat4 uTransform;
+
+  void main(void) {
+    gl_Position = vec4(aVertexCoords, 0.0, 1.0);
+    pos = uTransform * gl_Position;
+  }
+</script>
