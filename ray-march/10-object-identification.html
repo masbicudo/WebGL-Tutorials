@@ -243,49 +243,23 @@
     }
   }
 
-  void mainIterations(void) {
-    vec3 p = vec3(pos.xy, 0.0);
-    int steps = 0;
-    int objectId;
-    for (int i = 0; i < MAX_STEPS; i++) {
-        steps++;
-        float dist = distFunc(p, objectId);
-        p = vec3(p.xy, p.z + dist);
-        if (dist < CONTACT_DIFF || p.z > 2.) {
-            break;
-        }
-    }
-    gl_FragColor = vec4(vec3(float(steps)/float(MAX_STEPS)), 1.0);
-  }
-  void mainDepth(float minDepth, float maxDepth) {
-    vec3 p = vec3(pos.xy, 0.0);
-    int steps = 0;
-    int objectId;
-    for (int i = 0; i < MAX_STEPS; i++) {
-        steps++;
-        float dist = distFunc(p, objectId);
-        p = vec3(p.xy, p.z + dist);
-        if (dist < CONTACT_DIFF || p.z > 2.) {
-            break;
-        }
-    }
-    gl_FragColor = vec4(vec3(map(p.z, minDepth, maxDepth, 0.999, 0.001)), 1.0);
-  }
   void mainShaded(void) {
     vec3 p = vec3(pos.xy, 0.0);
     int steps = 0;
     vec3 normal = vec3(0.0, 0.0, 0.0);
-    float nearestDistance = 1000.;
-    float travelToNearest = 0.;
+    float nearestDistance = 1000.0;
+    float travelToNearest = 0.0;
     int objectId;
+    int nearestId;
     for (int i = 0; i < MAX_STEPS; i++) {
       steps++;
       float dist = distFunc(p, objectId);
       if (dist < nearestDistance) {
         nearestDistance = dist;
         travelToNearest = p.z;
+        nearestId = objectId;
       }
-      if (p.z > 2.)
+      if (p.z > 2.0)
         break;
       if (dist < CONTACT_DIFF)
         break;
@@ -320,23 +294,21 @@
       float lightSource = lightMarch(lightPos, -lightDir, length(lightVec), 16.);
 
       // Diffuse
-      float lightIntensity = (objectId == 1 ? OBJ1_LIGHT_INTENSITY : OBJ2_LIGHT_INTENSITY) / dot(lightVec, lightVec);
+      float lightIntensity = (nearestId == 1 ? OBJ1_LIGHT_INTENSITY : OBJ2_LIGHT_INTENSITY) / dot(lightVec, lightVec);
       float diffuse = max(dot(normal, lightDir), 0.0);
 
       // Specular
       vec3 viewDir = normalize(vec3(pos.xy, 0.0) - p);
       vec3 reflectDir = reflect(-lightDir, normal);
-      float specular = pow(max(dot(viewDir, reflectDir), 0.0), (objectId == 1 ? OBJ1_MATERIAL_SHINESS : OBJ2_MATERIAL_SHINESS));
+      float specular = pow(max(dot(viewDir, reflectDir), 0.0), (nearestId == 1 ? OBJ1_MATERIAL_SHINESS : OBJ2_MATERIAL_SHINESS));
 
-      vec3 objectColor = objectId == 1 ? OBJ1_COLOR : OBJ2_COLOR;
+      vec3 objectColor = nearestId == 1 ? OBJ1_COLOR : OBJ2_COLOR;
       
       float lightness = clamp((specular + diffuse) * lightSource * lightIntensity + LIGHT_AMBIENT, 0.0, 1.0);
       gl_FragColor = vec4(vec3(lightness) * objectColor, 1.0);
     }
   }
   void main(void) {
-    //mainDepth(0.0, 2.0); return;
-    //mainIterations(); return;
     mainShaded(); return;
   }
 </script>
