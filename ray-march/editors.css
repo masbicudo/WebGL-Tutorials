@@ -1,0 +1,15 @@
+div.row {
+    padding: 2px;
+}
+div.row > div.row {
+    margin-left: 10px;
+}
+div.group {
+    font-weight: bold;
+}
+input[type="textbox"] {
+    width: 8em;
+}
+input.small {
+    width: 4em;
+}
