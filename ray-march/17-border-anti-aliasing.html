@@ -131,6 +131,8 @@
   const vec3 OBJ2_COLOR = vec3(0.5, 1.0, 0.5);
   const vec3 OBJ2_BORDER_COLOR = vec3(0.05, 1.0, 0.05);
 
+  const float TIME_UNIT = 1e10;
+
   varying vec4 pos;
 
   uniform float uTime;
@@ -195,9 +197,10 @@
   }
 
   float distFunc(vec3 v, out int objectId) {
-    v = translate(v, vec3(0.,0.,-1.));
-    v = rotateAroundX(v, (uTime*1. + 60.)*Deg2Rad);
-    v = rotateAroundY(v, (uTime*1. + 30.)*Deg2Rad);
+    float time = uTime*(1.0/TIME_UNIT);
+    v = translate(v, vec3(0.0, 0.0, -1.0));
+    v = rotateAroundX(v, (time + 60.0)*Deg2Rad);
+    v = rotateAroundY(v, (time + 30.0)*Deg2Rad);
 
     vec3 v1 = v;
     v1 = translate(v1, vec3(0.,0.275,0.));
@@ -263,63 +266,85 @@
     return normal;
   }
 
+  struct RayMarchResult {
+    float nearestDistance;
+    float travelToNearest;
+    int nearestId;
+    bool culled;
+    int steps;
+  };
+
+  RayMarchResult raymarch(vec3 rayOrigin, vec3 rayDirection) {
+  
+    float nearestDistance = 1000.0;
+    float travelToNearest = 0.0;
+    int nearestId;
+
+    int borderId = -1;
+    int steps = 0;
+    float traveledSoFar = 0.0;
+    for (int i = 0; i < MAX_STEPS; i++) {
+      steps++;
+      int objectId;
+      float dist = distFunc(rayOrigin + traveledSoFar*rayDirection, objectId);
+      if (borderId < 0 && dist < BORDER_DISTANCE) {
+	borderId = objectId;
+      }
+      if (dist < nearestDistance) {
+	nearestDistance = dist;
+	travelToNearest = traveledSoFar;
+	nearestId = objectId;
+      }
+      if (traveledSoFar > 2.0)
+	break;
+      if (dist < CONTACT_DIFF)
+	break;
+      traveledSoFar += dist;
+    }
+    
+    return RayMarchResult(
+      nearestDistance,
+      travelToNearest,
+      nearestId,
+      traveledSoFar > 2.0,
+      steps);
+  }
+
   void mainShaded(void) {
     vec3 fragColor = vec3(0.0);
 
     vec3 eyeRayOrigin = vec3(pos.xy, 0.0);
     vec3 eyeRayDirection = vec3(0.0, 0.0, 1.0);
-    float repeat = 1.0;
+    int repeat = 1;
 
-    for (int runId = 0; runId < 10; runId++) {
-      if (float(runId) >= repeat) break;
-      vec3 p = eyeRayOrigin;
-      int steps = 0;
-      float nearestDistance = 1000.0;
-      float travelToNearest = 0.0;
-      int borderId = -1;
-      int objectId;
-      int nearestId;
-      for (int i = 0; i < MAX_STEPS; i++) {
-        steps++;
-        float dist = distFunc(p, objectId);
-        if (borderId < 0 && dist < BORDER_DISTANCE) {
-          borderId = objectId;
-        }
-        if (dist < nearestDistance) {
-          nearestDistance = dist;
-          travelToNearest = p.z;
-          nearestId = objectId;
-        }
-        if (p.z > 2.0)
-          break;
-        if (dist < CONTACT_DIFF)
-          break;
-        p = vec3(p.xy, p.z + dist);
-      }
+    const int MAX_AA_STEPS = 2;
+    for (int runId = 0; runId < MAX_AA_STEPS; runId++) {
+      if (runId >= repeat) break;
+      RayMarchResult r = raymarch(eyeRayOrigin, eyeRayDirection);
 
-      float addToRepeat = 0.0;
-      if (p.z > 2.0) {
+      int addToRepeat = 0;
+      if (r.culled) {
         fragColor += vec3(0.0);
       }
       else {
-        p = vec3(pos.xy, travelToNearest);
+        vec3 p = eyeRayOrigin + eyeRayDirection*r.travelToNearest;
 
         vec3 normal = vec3(0.0, 0.0, 0.0);
-        if (nearestDistance < CONTACT_DIFF || steps == MAX_STEPS) {
-          normal = normalFunc(p, nearestDistance);
+        if (r.nearestDistance < CONTACT_DIFF || r.steps == MAX_STEPS) {
+          normal = normalFunc(p, r.nearestDistance);
 
           // deflecting eye-ray with the normal
           vec3 normalOrthoEyeDir = normal - eyeRayDirection * (dot(normal, eyeRayDirection) / dot(eyeRayDirection, eyeRayDirection));
 
           // normalOrthoEyeDir is smaller than or equal to the normal,
-          // the normal itself is 1.0 of length, because it is normalized,
+          // the length of the normal is 1.0, because it is normalized,
           // then the length of normalOrthoEyeDir is smaller than or equal to 1.0.
           if (length(normalOrthoEyeDir) > 0.99)
           {
-            eyeRayOrigin = p + CONTACT_DIFF * normalOrthoEyeDir;
+            eyeRayOrigin = p + CONTACT_DIFF*normal;
             //fragColor = vec3(normalOrthoEyeDir * 0.5 + 0.5);
             //return;
-            addToRepeat = 1.0;
+            addToRepeat = 1;
           }
         }
 
@@ -333,23 +358,24 @@
         float lightSource = lightMarch(lightPos, -lightDir, length(lightVec), 16.);
 
         // Diffuse
-        float lightIntensity = (nearestId == 1 ? OBJ1_LIGHT_INTENSITY : OBJ2_LIGHT_INTENSITY) / dot(lightVec, lightVec);
+        float lightIntensity = (r.nearestId == 1 ? OBJ1_LIGHT_INTENSITY : OBJ2_LIGHT_INTENSITY) / dot(lightVec, lightVec);
         float diffuse = max(dot(normal, lightDir), 0.0);
 
-        // Specular
+        // SpeculartravelToNearest
         vec3 viewDir = normalize(vec3(pos.xy, 0.0) - p);
         vec3 reflectDir = reflect(-lightDir, normal);
-        float specular = pow(max(dot(viewDir, reflectDir), 0.0), (nearestId == 1 ? OBJ1_MATERIAL_SHINESS : OBJ2_MATERIAL_SHINESS));
+        float specular = pow(max(dot(viewDir, reflectDir), 0.0), (r.nearestId == 1 ? OBJ1_MATERIAL_SHINESS : OBJ2_MATERIAL_SHINESS));
 
-        vec3 objectColor = nearestId == 1 ? OBJ1_COLOR : OBJ2_COLOR;
+        vec3 objectColor = r.nearestId == 1 ? OBJ1_COLOR : OBJ2_COLOR;
 
         float lightness = clamp((specular + diffuse) * lightSource * lightIntensity + LIGHT_AMBIENT, 0.0, 1.0);
         fragColor += vec3(lightness) * objectColor;
       }
+
       repeat += addToRepeat;
     }
 
-    gl_FragColor = vec4(fragColor / float(repeat), 1.0);
+    gl_FragColor = vec4(fragColor / float(repeat > MAX_AA_STEPS ? MAX_AA_STEPS : repeat), 1.0);
     //gl_FragColor = vec4(vec3((float(repeat-1.0) * 0.1) + 0.00001), 1.0);
   }
   void main(void) {
