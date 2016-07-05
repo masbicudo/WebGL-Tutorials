@@ -131,7 +131,7 @@
   const vec3 OBJ2_COLOR = vec3(0.5, 1.0, 0.5);
   const vec3 OBJ2_BORDER_COLOR = vec3(0.05, 1.0, 0.05);
 
-  const float TIME_UNIT = 1e10;
+  const float TIME_UNIT = 1.0;
 
   varying vec4 pos;
 
@@ -341,7 +341,8 @@
           // then the length of normalOrthoEyeDir is smaller than or equal to 1.0.
           if (length(normalOrthoEyeDir) > 0.99)
           {
-            eyeRayOrigin = p + CONTACT_DIFF*normal;
+            eyeRayOrigin = p + CONTACT_DIFF*normalOrthoEyeDir; // alternative #1
+            //eyeRayOrigin = p + CONTACT_DIFF*normal; // alternative #2
             //fragColor = vec3(normalOrthoEyeDir * 0.5 + 0.5);
             //return;
             addToRepeat = 1;
