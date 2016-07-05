@@ -13,6 +13,7 @@
         <div class="row"><label for="uEnableAA">Enable AA</label> <input id="uEnableAA" type="checkbox" checked="checked" /></div>
         <div class="row"><label for="uAnimationSpeed">Animation speed</label> <input id="uAnimationSpeed" type="textbox" value="1" /></div>
         <div class="row"><label for="uAAMinAngleSine">AA Min Angle Sine</label> <input id="uAAMinAngleSine" type="textbox" value="0.99" /></div>
+        <div class="row"><label for="uAAMaxSteps">AA Max Steps</label> <input id="uAAMaxSteps" type="textbox" value="2" /></div>
       </div>
   </div>
 </body>
@@ -22,6 +23,8 @@
       uEnableAA: {type: "bool"},
       uAAMinAngleSine: {type: "float"},
       uAnimationSpeed: {type: "float"},
+      uAAMaxSteps: {type: "int"},
+      uPixelSize: {type: "--pixel-size"},
     });
   }
   if(window.addEventListener) {
@@ -51,7 +54,10 @@
 
   uniform float uAnimationSpeed;
   uniform float uAAMinAngleSine;
+  uniform int uAAMaxSteps;
   uniform bool uEnableAA;
+
+  uniform vec2 uPixelSize;
 
   varying vec4 pos;
 
@@ -237,8 +243,9 @@
     vec3 eyeRayDirection = vec3(0.0, 0.0, 1.0);
     int repeat = 1;
 
-    const int MAX_AA_STEPS = 2;
+    const int MAX_AA_STEPS = 20;
     for (int runId = 0; runId < MAX_AA_STEPS; runId++) {
+      if (runId >= uAAMaxSteps) break;
       if (runId >= repeat) break;
       RayMarchResult r = raymarch(eyeRayOrigin, eyeRayDirection);
 
@@ -261,8 +268,8 @@
           // then the length of normalOrthoEyeDir is smaller than or equal to 1.0.
           if (length(normalOrthoEyeDir) > uAAMinAngleSine)
           {
-            eyeRayOrigin = p + CONTACT_DIFF*normalOrthoEyeDir; // alternative #1
-            //eyeRayOrigin = p + CONTACT_DIFF*normal; // alternative #2
+            eyeRayOrigin = p + uPixelSize*normalOrthoEyeDir; // alternative #1
+            //eyeRayOrigin = p + uPixelSize*normal; // alternative #2
             //fragColor = vec3(normalOrthoEyeDir * 0.5 + 0.5);
             //return;
             addToRepeat = 1;
@@ -297,7 +304,7 @@
       if (!uEnableAA) break;
     }
 
-    gl_FragColor = vec4(fragColor / float(!uEnableAA ? 1 : repeat > MAX_AA_STEPS ? MAX_AA_STEPS : repeat), 1.0);
+    gl_FragColor = vec4(fragColor / float(!uEnableAA ? 1 : repeat > uAAMaxSteps ? uAAMaxSteps : repeat), 1.0);
     //gl_FragColor = vec4(vec3((float(repeat-1.0) * 0.1) + 0.00001), 1.0);
   }
   void main(void) {
