@@ -2,115 +2,33 @@
     <title>#17 Border Anti-aliasing</title>
     <script type="text/javascript" src="../lib/gl-matrix.js"></script>
     <script type="text/javascript" src="../lib/mdn-getShader.js"></script>
+    <script type="text/javascript" src="../lib/leaf-draw.js"></script>
+    <link rel="stylesheet" type="text/css" href="editors.css">
 </head>
-<body onload="javascript:startWebGLApp()">
-    <canvas id="canvas" style="border:none" width="600" height="800" />
+<body>
+  <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
+  <div style="display: inline-block;">
+     <div id="txt">0</div>
+     <div class="row"><div class="group">Settings</div>
+        <div class="row"><label for="uEnableAA">Enable AA</label> <input id="uEnableAA" type="checkbox" checked="checked" /></div>
+        <div class="row"><label for="uAnimationSpeed">Animation speed</label> <input id="uAnimationSpeed" type="textbox" value="1" /></div>
+        <div class="row"><label for="uAAMinAngleSine">AA Min Angle Sine</label> <input id="uAAMinAngleSine" type="textbox" value="0.99" /></div>
+      </div>
+  </div>
 </body>
 <script type="text/javascript">
-  "use strict";
-
-  function startWebGLApp() {
-    var gl = getWebGLContext("canvas");
-    var programs = {
-      fragShader: getShader("fragment-shader"),
-      vertexShader: getShader("vertex-shader")
-    };
-    var programParams = initShaders(gl);
-    var shape = createSquare(gl);
-    gl.clearColor(0, 0, 0, 1);
-    draw(gl, shape, programParams);
+  function startWebGLApp2() {
+    startWebGLApp({
+      uEnableAA: {type: "bool"},
+      uAAMinAngleSine: {type: "float"},
+      uAnimationSpeed: {type: "float"},
+    });
   }
-
-  function getWebGLContext(id) {
-    var canvasElement = document.getElementById(id);
-    try {
-        var gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-        return gl;
-    }
-    catch(e) {}
-    return;
+  if(window.addEventListener) {
+    window.addEventListener('load', startWebGLApp2)
+  }else{
+    window.attachEvent('onload', startWebGLApp2)
   }
-
-  function initShaders(gl) {
-    var fragmentShader = getShader(gl, "fragment-shader");
-    var vertexShader = getShader(gl, "vertex-shader");
-
-    // Creating shader program
-    var shaderProgram = gl.createProgram();
-    gl.attachShader(shaderProgram, vertexShader);
-    gl.attachShader(shaderProgram, fragmentShader);
-    gl.linkProgram(shaderProgram);
-
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-      alert("Could not initialize shaders.");
-    }
-
-    gl.useProgram(shaderProgram);
-
-    var aVertexCoords = gl.getAttribLocation(shaderProgram, "aVertexCoords");
-    gl.enableVertexAttribArray(aVertexCoords);
-
-    var uTransform = gl.getUniformLocation(shaderProgram, "uTransform");
-    var uTime = gl.getUniformLocation(shaderProgram, "uTime");
-
-    return {
-      aVertexCoords: aVertexCoords,
-      uTransform: uTransform,
-      uTime: uTime
-    };
-  }
-
-  function createSquare(gl) {
-    var squareVertexCoordBuffer = gl.createBuffer();
-    var coorsdArray = [
-      -1,  1, // 1st point
-       1,  1, // 2nd point
-      -1, -1, // 3rd point
-       1, -1  // 4th point
-    ];
-    gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coorsdArray), gl.STATIC_DRAW);
-    return {
-      coordsBuffer: squareVertexCoordBuffer,
-      coorsdArray: coorsdArray,
-      pointCount: 4,
-      pointSize: 2
-    };
-  }
-
-  function draw(gl, shape, programParams) {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    var ratio = canvas.width / canvas.height;
-    var rx = ratio > 1 ? 1 : ratio;
-    var ry = ratio > 1 ? 1/ratio : 1;
-    var transformMatrix = [
-         rx,   0,   0,   0,
-          0,  ry,   0,   0,
-          0,   0,   1,   0,
-          0,   0,   0,   1
-    ];
-    gl.uniformMatrix4fv(programParams.uTransform, false, transformMatrix);
-
-    // setting the current buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, shape.coordsBuffer);
-
-    // associate attribute 'aVertexCoords' with current buffer
-    gl.vertexAttribPointer(programParams.aVertexCoords, 2, gl.FLOAT, false, 0, 0);
-
-    var time = 0;
-    var interval = 1000 / 15;
-    window.setInterval(function() {
-
-      gl.uniform1f(programParams.uTime, time * 0.01);
-      time += interval;
-
-      // draw triangles, using the shaders of the current program, with the current attributes
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, shape.pointCount);
-
-    }, interval);
-  }
-
 </script>
 <script id="fragment-shader" type="x-shader/x-fragment">
   precision highp float;
@@ -131,7 +49,9 @@
   const vec3 OBJ2_COLOR = vec3(0.5, 1.0, 0.5);
   const vec3 OBJ2_BORDER_COLOR = vec3(0.05, 1.0, 0.05);
 
-  const float TIME_UNIT = 1.0;
+  uniform float uAnimationSpeed;
+  uniform float uAAMinAngleSine;
+  uniform bool uEnableAA;
 
   varying vec4 pos;
 
@@ -197,7 +117,7 @@
   }
 
   float distFunc(vec3 v, out int objectId) {
-    float time = uTime*(1.0/TIME_UNIT);
+    float time = uTime*uAnimationSpeed;
     v = translate(v, vec3(0.0, 0.0, -1.0));
     v = rotateAroundX(v, (time + 60.0)*Deg2Rad);
     v = rotateAroundY(v, (time + 30.0)*Deg2Rad);
@@ -339,7 +259,7 @@
           // normalOrthoEyeDir is smaller than or equal to the normal,
           // the length of the normal is 1.0, because it is normalized,
           // then the length of normalOrthoEyeDir is smaller than or equal to 1.0.
-          if (length(normalOrthoEyeDir) > 0.99)
+          if (length(normalOrthoEyeDir) > uAAMinAngleSine)
           {
             eyeRayOrigin = p + CONTACT_DIFF*normalOrthoEyeDir; // alternative #1
             //eyeRayOrigin = p + CONTACT_DIFF*normal; // alternative #2
@@ -374,9 +294,10 @@
       }
 
       repeat += addToRepeat;
+      if (!uEnableAA) break;
     }
 
-    gl_FragColor = vec4(fragColor / float(repeat > MAX_AA_STEPS ? MAX_AA_STEPS : repeat), 1.0);
+    gl_FragColor = vec4(fragColor / float(!uEnableAA ? 1 : repeat > MAX_AA_STEPS ? MAX_AA_STEPS : repeat), 1.0);
     //gl_FragColor = vec4(vec3((float(repeat-1.0) * 0.1) + 0.00001), 1.0);
   }
   void main(void) {
