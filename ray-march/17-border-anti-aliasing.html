@@ -221,7 +221,7 @@
   }
 
   float lightMarch(in vec3 origin, in vec3 direction, float maxTravel, float spread) {
-    float traveled = 0.;
+    float traveled = 0.0;
     int steps = 0;
     float res = 0.9;
     float prevDist = 1000.0;
@@ -264,14 +264,14 @@
   }
 
   void mainShaded(void) {
-    gl_FragColor = vec4(0.0);
+    vec3 fragColor = vec3(0.0);
 
     vec3 eyeRayOrigin = vec3(pos.xy, 0.0);
     vec3 eyeRayDirection = vec3(0.0, 0.0, 1.0);
-    int repeat = 1;
+    float repeat = 1.0;
 
     for (int runId = 0; runId < 10; runId++) {
-      if (runId >= repeat) break;
+      if (float(runId) >= repeat) break;
       vec3 p = eyeRayOrigin;
       int steps = 0;
       float nearestDistance = 1000.0;
@@ -297,8 +297,9 @@
         p = vec3(p.xy, p.z + dist);
       }
 
+      float addToRepeat = 0.0;
       if (p.z > 2.0) {
-        gl_FragColor += vec4(0.0, 0.0, 0.0, 1.0);
+        fragColor += vec3(0.0);
       }
       else {
         p = vec3(pos.xy, travelToNearest);
@@ -315,10 +316,10 @@
           // then the length of normalOrthoEyeDir is smaller than or equal to 1.0.
           if (length(normalOrthoEyeDir) > 0.99)
           {
-            vec3 eyeRayOrigin = p + CONTACT_DIFF * normalOrthoEyeDir;
-            //gl_FragColor = vec4(normalOrthoEyeDir * 0.5 + 0.5, 1.0);
+            eyeRayOrigin = p + CONTACT_DIFF * normalOrthoEyeDir;
+            //fragColor = vec3(normalOrthoEyeDir * 0.5 + 0.5);
             //return;
-            //repeat++;
+            addToRepeat = 1.0;
           }
         }
 
@@ -343,12 +344,13 @@
         vec3 objectColor = nearestId == 1 ? OBJ1_COLOR : OBJ2_COLOR;
 
         float lightness = clamp((specular + diffuse) * lightSource * lightIntensity + LIGHT_AMBIENT, 0.0, 1.0);
-        gl_FragColor += vec4(vec3(lightness) * objectColor, 1.0);
+        fragColor += vec3(lightness) * objectColor;
       }
+      repeat += addToRepeat;
     }
 
-    gl_FragColor = gl_FragColor / float(repeat);
-    //gl_FragColor = vec4(vec3(float(repeat) / 10.0), 1.0);
+    gl_FragColor = vec4(fragColor / float(repeat), 1.0);
+    //gl_FragColor = vec4(vec3((float(repeat-1.0) * 0.1) + 0.00001), 1.0);
   }
   void main(void) {
     mainShaded(); return;
