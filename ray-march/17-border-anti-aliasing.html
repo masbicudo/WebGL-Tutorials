@@ -268,8 +268,8 @@
           // then the length of normalOrthoEyeDir is smaller than or equal to 1.0.
           if (length(normalOrthoEyeDir) > uAAMinAngleSine)
           {
-            eyeRayOrigin = p + uPixelSize*normalOrthoEyeDir; // alternative #1
-            //eyeRayOrigin = p + uPixelSize*normal; // alternative #2
+            eyeRayOrigin = p + vec3(uPixelSize, 0.5*(uPixelSize.x + uPixelSize.y))*normalOrthoEyeDir; // alternative #1
+            //eyeRayOrigin = p + uPixelSize.x*normal; // alternative #2
             //fragColor = vec3(normalOrthoEyeDir * 0.5 + 0.5);
             //return;
             addToRepeat = 1;
