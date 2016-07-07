@@ -6,7 +6,7 @@
     <link rel="stylesheet" type="text/css" href="editors.css">
 </head>
 <body>
-  <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
+  <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="600" /></div>
   <div style="display: inline-block;">
      <div id="txt">0</div>
      <div class="row"><div class="group">Settings</div>
@@ -318,6 +318,6 @@
 
   void main(void) {
     gl_Position = vec4(aVertexCoords, 0.0, 1.0);
-    pos = uTransform * gl_Position * 1.5;
+    pos = uTransform * gl_Position;
   }
 </script>
