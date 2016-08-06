@@ -4,20 +4,15 @@
     <script type="text/javascript" src="../lib/mdn-getShader.js"></script>
     <script type="text/javascript" src="../lib/leaf-draw.js"></script>
 </head>
-<body onload="javascript:startWebGLApp()">
-    <div><canvas id="canvas" style="border:none;width:540px;height:720px;" width="300" height="400" /></div>
+<body>
+    <div><canvas id="canvas" style="border:none;width:600px;height:800px;" width="600" height="800" /></div>
     <div id="txt">0</div>
 </body>
 <script type="text/javascript">
-  function startWebGLApp2() {
+  window.addEventListener('load', function() {
     startWebGLApp({
     });
-  }
-  if(window.addEventListener) {
-    window.addEventListener('load', startWebGLApp2)
-  }else{
-    window.attachEvent('onload', startWebGLApp2)
-  }
+  })
 </script>
 <script id="fragment-shader" type="x-shader/x-fragment">
   precision highp float;
@@ -25,7 +20,7 @@
   const vec3 LIGHT_AMBIENT = vec3(0.8,0.9,1.0)*0.99;
   const float ANIMATION_RATE = 1.0;
   const float ANIMATION_OFFSET = 20007.0;
-  const float MIN_FOG_TRAVEL = 0.005;
+  const float MIN_FOG_TRAVEL = 0.0025;
   const float CLOUD_ABSORBTION = 0.005;
   const float CLOUD_INTENSITY = 8.0;
   const vec3 LIGHT_SOURCE = vec3(1.0, 1.0, -1.0);
@@ -36,7 +31,7 @@
 
   const float PI = 3.14159265359;
   const float INFINITY = 1e20;
-  const float Deg2Rad = 2.*PI/360.;
+  const float Deg2Rad = 2.0*PI/360.;
 
   float map(float value, float low1, float high1, float low2, float high2) {
     return low2 + (value - low1) * (high2 - low2) / (high1 - low1);
