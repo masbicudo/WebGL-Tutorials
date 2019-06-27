@@ -1,1 +1,10 @@
+/application_list.txt
+/.vscode/ipch/
+/*.exe
+/finilize.cmd
+*.bak
+/_site/
+Gemfile
+Gemfile.lock
+*.orig
 *.log

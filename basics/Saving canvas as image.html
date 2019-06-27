@@ -121,18 +121,26 @@
   function save()
   {
     var canvas = document.getElementById("canvas");
-    var imageDataUri = (
-        canvas
-          .toDataURL("image/png")
-          .replace("image/png", "application/octet-stream")
-      );
+    
+    if (canvas.toBlob) {
+      canvas.toBlob(function(blob) {
+          saveAs(blob, "pretty image.png");
+      });
+    }
+    else {
+      var imageDataUri = (
+          canvas
+            .toDataURL("image/png")
+            .replace("image/png", "application/octet-stream")
+        );
 
-    var aLink = document.createElement('a');
-    var evt = document.createEvent("HTMLEvents");
-    evt.initEvent("click");
-    aLink.download = 'image1.png';
-    aLink.href = imageDataUri;
-    aLink.dispatchEvent(evt);
+      var aLink = document.createElement('a');
+      var evt = document.createEvent("HTMLEvents");
+      evt.initEvent("click");
+      aLink.download = 'image1.png';
+      aLink.href = imageDataUri;
+      aLink.dispatchEvent(evt);
+    }
   }
 
 </script>
