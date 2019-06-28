@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <head>
-    <title>#5 Custom geometry edges</title>
+    <title>#6 Custom geometry with generated normals</title>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.min.js"></script>
 </head>
 <body>
+  <h1></h1>
   <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
 </body>
 <script type="text/javascript">
 'use strict'
 
+document.querySelector('h1').innerText = document.title
 main()
 
 function main() {
@@ -27,17 +29,27 @@ function main() {
   const scene = new THREE.Scene();
 
   // geometry
-  // https://stackoverflow.com/questions/20153705/three-js-wireframe-material-all-polygons-vs-just-edges
-  const geometry = new THREE.EdgesGeometry(createCylinderGeometry())
+  const geometry = createCylinderGeometry()
+  // https://stackoverflow.com/questions/49678307/fixing-normals-in-custom-threejs-capsule-geometry
+  geometry.computeVertexNormals()
 
   // material (phong)
-  const material = new THREE.LineBasicMaterial({color: 0xFFFFFF});
+  const material = new THREE.MeshPhongMaterial({color: 0xFFFFFF});
 
   // mesh
-  const mesh = new THREE.LineSegments(geometry, material);
+  const mesh = new THREE.Mesh(geometry, material);
 
   // composing scene
   scene.add(mesh);
+
+  // light source
+  {
+    const color = 0xFFFFFF;
+    const intensity = 1;
+    const light = new THREE.PointLight(color, intensity);
+    light.position.set(-1, 2, 4);
+    scene.add(light);
+  }
 
   // rendering scene through the view of the camera
   function render(time) {

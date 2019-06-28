@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <head>
-    <title>#6 Custom lit geometry</title>
+    <title>#7b Custom geometry with normals</title>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.min.js"></script>
 </head>
 <body>
+  <h1></h1>
   <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
 </body>
 <script type="text/javascript">
 'use strict'
 
+document.querySelector('h1').innerText = document.title
 main()
 
 function main() {
@@ -28,14 +30,17 @@ function main() {
 
   // geometry
   const geometry = createCylinderGeometry()
-  // https://stackoverflow.com/questions/49678307/fixing-normals-in-custom-threejs-capsule-geometry
-  geometry.computeVertexNormals()
 
   // material (phong)
   const material = new THREE.MeshPhongMaterial({color: 0xFFFFFF});
 
   // mesh
   const mesh = new THREE.Mesh(geometry, material);
+  geometry.computeBoundingSphere()
+  console.log(geometry.boundingSphere.radius)
+  const normal_line_length = geometry.boundingSphere.radius / 4
+  const normals = new THREE.VertexNormalsHelper( mesh, normal_line_length )
+  mesh.add(normals)
 
   // composing scene
   scene.add(mesh);
@@ -44,7 +49,7 @@ function main() {
   {
     const color = 0xFFFFFF;
     const intensity = 1;
-    const light = new THREE.PointLight(color, intensity);
+    const light = new THREE.PointLight(color, intensity, 0, 2);
     light.position.set(-1, 2, 4);
     scene.add(light);
   }
@@ -76,21 +81,34 @@ function createCylinderGeometry(r, h, r_steps, h_steps) {
   // second, because the second's base is the first's top.
   // In THREE JS this will not happen. We will create all the
   // needed vertices in one go, and then create all the faces.
+  const normals = []
   r = typeof r != 'undefined' ? r : 1
   h = typeof h != 'undefined' ? r : 2
   r_steps = typeof r_steps != 'undefined' ? r_steps : 22
   h_steps = typeof h_steps != 'undefined' ? h_steps : 2
   const geometry = new THREE.Geometry();
-  geometry.vertices.push(new THREE.Vector3(0, 0, -0.5*h))
-  geometry.vertices.push(new THREE.Vector3(0, 0, +0.5*h))
+  const v = geometry.vertices
+  const zup = new THREE.Vector3(0,0,1)
+  const zdn = new THREE.Vector3(0,0,-1)
+  const nv = [zdn, zup]
+  v.push(new THREE.Vector3(0, 0, -0.5*h))
+  v.push(new THREE.Vector3(0, 0, +0.5*h))
   for (var h_it = 0; h_it <= h_steps; h_it++) {
     var h_val = (h_it/h_steps - 0.5)*h
     for (var r_it = 0; r_it < r_steps; r_it++) {
       var r_val = r_it/r_steps*2*Math.PI
-      var x = Math.cos(r_val)*r
-      var y = Math.sin(r_val)*r
+      // cosine and sine
+      var c = Math.cos(r_val)
+      var s = Math.sin(r_val)
+      // coords
+      var x = c*r
+      var y = s*r
       var z = h_val
-      geometry.vertices.push(new THREE.Vector3(x, y, z))
+      // point and normal
+      var p = new THREE.Vector3(x, y, z)
+      var n = new THREE.Vector3(c, s, 0)
+      v.push(p)
+      nv.push(n)
     }
   }
   for (var h_it = 0; h_it < h_steps; h_it++) {
@@ -99,10 +117,10 @@ function createCylinderGeometry(r, h, r_steps, h_steps) {
       var b = 2 + (r_it + 0)%r_steps + ((h_it + 1)*r_steps)
       var c = 2 + (r_it + 1)%r_steps + ((h_it + 0)*r_steps)
       var d = 2 + (r_it + 1)%r_steps + ((h_it + 1)*r_steps)
-      geometry.faces.push(new THREE.Face3(c, b, a))
-      geometry.faces.push(new THREE.Face3(b, c, d))
-      if (h_it == 0) geometry.faces.push(new THREE.Face3(0, c, a))
-      if (h_it == h_steps - 1) geometry.faces.push(new THREE.Face3(1, b, d))
+      geometry.faces.push(new THREE.Face3(c, b, a, [nv[c], nv[b], nv[a]]))
+      geometry.faces.push(new THREE.Face3(b, c, d, [nv[b], nv[c], nv[d]]))
+      if (h_it == 0) geometry.faces.push(new THREE.Face3(0, c, a, [zdn, zdn, zdn]))
+      if (h_it == h_steps - 1) geometry.faces.push(new THREE.Face3(1, b, d, [zup, zup, zup]))
     }
   }
   return geometry

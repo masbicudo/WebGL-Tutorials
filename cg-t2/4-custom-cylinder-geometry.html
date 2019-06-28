@@ -4,11 +4,13 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.min.js"></script>
 </head>
 <body>
+  <h1></h1>
   <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
 </body>
 <script type="text/javascript">
 'use strict'
 
+document.querySelector('h1').innerText = document.title
 main()
 
 function main() {
