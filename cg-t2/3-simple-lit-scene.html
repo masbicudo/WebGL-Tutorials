@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<head>
+    <title>#3 Simple lit scene</title>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.min.js"></script>
+</head>
+<body>
+  <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
+</body>
+<script type="text/javascript">
+'use strict'
+
+main()
+
+function main() {
+  const canvas = document.querySelector('#canvas')
+  const renderer = new THREE.WebGLRenderer({canvas})
+
+  // camera
+  const fov = 75;
+  const aspect = canvas.clientWidth/canvas.clientHeight;
+  const near = 0.1;
+  const far = 5;
+  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  camera.position.z = 2;
+
+  // scene
+  const scene = new THREE.Scene();
+
+  // geometry
+  const boxWidth = 1;
+  const boxHeight = 1;
+  const boxDepth = 1;
+  const geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
+
+  // material (phong)
+  const material = new THREE.MeshPhongMaterial({color: 0xFFFFFF});
+
+  // mesh
+  const cube = new THREE.Mesh(geometry, material);
+
+  // composing scene
+  scene.add(cube);
+
+  // light source
+  {
+    const color = 0xFFFFFF;
+    const intensity = 1;
+    const light = new THREE.DirectionalLight(color, intensity);
+    light.position.set(-1, 2, 4);
+    scene.add(light);
+  }
+
+  // rendering scene through the view of the camera
+  function render(time) {
+    time /= 1000; // convert milliseconds to seconds
+  
+    cube.rotation.x = time;
+    cube.rotation.y = time / 2;
+    cube.rotation.y = time / 5;
+  
+    renderer.render(scene, camera);
+  
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+}
+
+</script>
