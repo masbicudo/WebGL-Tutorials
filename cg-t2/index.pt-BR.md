@@ -32,6 +32,7 @@ Mais pra frente vou atualizar a parte da documentação em inglês.
 - a) [Normais manuais calculadas erroneamente](7a-custom-geometry-wrong-normals)
 - b) [Normais manuais corrigidas](7b-custom-geometry-normals)
 8. [Aramado e normais](8-geometry-wireframe-normals)
+9. [Texturizando o cilindro](9-texture)
 
 ### Dia 2
 
