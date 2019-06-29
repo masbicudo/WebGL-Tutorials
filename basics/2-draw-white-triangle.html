@@ -11,10 +11,6 @@
 
     function startWebGLApp() {
         var gl = getWebGLContext("canvas");
-        var programs = {
-            fragShader: getShader("fragment-shader"),
-            vertexShader: getShader("vertex-shader")
-        };
         var attributes = initShaders(gl);
         var shape = createTriangle(gl);
         gl.clearColor(0,0,0,1);
