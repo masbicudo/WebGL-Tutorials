@@ -69,6 +69,9 @@ function main() {
   requestAnimationFrame(render);
 }
 
+// Note: from this point onward, this function will be moved
+// to the custom-geometry.js file. There I will place
+// all other needed geomtries.
 function createCylinderGeometry(r, h, r_steps, h_steps) {
   // Cylinder
   // ========
@@ -117,6 +120,21 @@ function createCylinderGeometry(r, h, r_steps, h_steps) {
       var b = 2 + (r_it + 0)%r_steps + ((h_it + 1)*r_steps)
       var c = 2 + (r_it + 1)%r_steps + ((h_it + 0)*r_steps)
       var d = 2 + (r_it + 1)%r_steps + ((h_it + 1)*r_steps)
+
+      // Faces obey the right hand rule to determine what side is the front side
+      // The thumb indicates where is the front face direction.
+      // The other fingers indicate the order of the input vertices.
+      // 
+      // This is the organization of the vertices a, b, c and d:
+      //   b---d  This represents the order of the vertices over the cylinder,
+      //   |   |  as if we were looking to it from the outside. So we want to
+      //   a---c  order them in a counter-clockwise way: ⭯
+      //
+      // First triangle: c->b->a   Second triangle: b->c->d
+      //   b                         b 🡐 d
+      //   🡓 🡔                         🡖 🡑
+      //   a 🡒 c                         c
+      
       geometry.faces.push(new THREE.Face3(c, b, a, [nv[c], nv[b], nv[a]]))
       geometry.faces.push(new THREE.Face3(b, c, d, [nv[b], nv[c], nv[d]]))
       if (h_it == 0) geometry.faces.push(new THREE.Face3(0, c, a, [zdn, zdn, zdn]))
