@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<head>
+    <title>#10 Keyboard controls - arcball</title>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.js"></script>
+    <script type="text/javascript" src="custom-geometries.js"></script>
+</head>
+<body>
+  <h1></h1>
+  <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
+</body>
+<script type="text/javascript">
+'use strict'
+
+document.querySelector('h1').innerText = document.title
+main()
+
+function main() {
+  const canvas = document.querySelector('#canvas')
+  const renderer = new THREE.WebGLRenderer({canvas})
+
+  // camera
+  const fov = 100;
+  const aspect = canvas.clientWidth/canvas.clientHeight;
+  const near = 0.1;
+  const far = 10;
+  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  camera.position.z = 4;
+
+  // load textures
+  const textureLoader = new THREE.TextureLoader();
+  const texture = textureLoader.load( 'uv_test_bw_1024.png' );
+  texture.encoding = THREE.sRGBEncoding
+  texture.anisotropy = 16
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+
+  // scene
+  const scene = new THREE.Scene();
+
+  // geometry
+  const geometry = createCylinderGeometry({
+    r_steps: 4,
+    r_frac: 1/2,
+    a_steps: 24,
+  })
+
+  // material
+  const material = new THREE.MeshPhongMaterial({
+      color: 0xFFFFFF,
+      map: texture,
+    });
+
+  // mesh
+  const mesh = new THREE.Mesh(geometry, material);
+  geometry.computeBoundingSphere()
+  console.log(geometry.boundingSphere.radius)
+  const normal_line_length = geometry.boundingSphere.radius / 32
+  const normals = new THREE.VertexNormalsHelper( mesh, normal_line_length )
+  mesh.add(normals)
+
+  // composing scene
+  scene.add(mesh);
+
+  // light source
+  const color = 0xFFFFFF;
+  const intensity = 1;
+  const light = new THREE.PointLight(color, intensity, 0, 2);
+  light.position.set(-1, 2, 4);
+  scene.add(light);
+
+  // lightBulb representing the light source
+  var lightBulb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.25, 32, 32),
+    new THREE.MeshBasicMaterial( {color: 0xffffff} )
+    )
+  lightBulb.position.copy(light.position)
+  scene.add(lightBulb);
+
+  const rot_about = mesh.position
+
+  const rot = Math.PI*2/32
+  var rot_y = 0;
+
+  var prev_mouse = null
+  function handler(event){
+    var transformation = null
+
+    // what is going to be moved
+    var rot_objects = []
+    if (event.shiftKey) {
+      rot_objects.push(light, lightBulb)
+    }
+    if (event.altKey) {
+      rot_objects.push(mesh)
+    }
+    if (rot_objects.length == 0) rot_objects.push(camera)
+
+    // if mouse is being used to move
+    var mouse_delta = null
+    if (event.type.startsWith("mouse")) {
+      mouse_delta = prev_mouse ? [event.x - prev_mouse[0], event.y - prev_mouse[1]] : null
+      prev_mouse = [event.x, event.y]
+
+      if (mouse_delta&& event.buttons) {
+        var axis = new THREE.Vector3(mouse_delta[1], mouse_delta[0], 0).normalize()
+        var dist = Math.sqrt(mouse_delta[0]*mouse_delta[0] + mouse_delta[1]*mouse_delta[1])
+        transformation = new THREE.Matrix4().makeRotationAxis(axis, -Math.abs(rot*dist/10))
+      }
+    }
+    if (event.type == "mouseup") mouse_delta = null
+
+    // if keyboard is being used to move
+    if (event.type == "keydown") {
+      if (event.keyCode == 65) {
+        transformation = new THREE.Matrix4().makeRotationY(+rot)
+      }
+      else if (event.keyCode == 68) {
+        transformation = new THREE.Matrix4().makeRotationY(-rot)
+      }
+      else if (event.keyCode == 87) {
+        transformation = new THREE.Matrix4().makeRotationX(+rot)
+      }
+      else if (event.keyCode == 83) {
+        transformation = new THREE.Matrix4().makeRotationX(-rot)
+      }
+      else if (event.keyCode == 81) {
+        transformation = new THREE.Matrix4().makeRotationZ(+rot)
+      }
+      else if (event.keyCode == 69) {
+        transformation = new THREE.Matrix4().makeRotationZ(-rot)
+      }
+      else console.log(event.keyCode);
+    }
+
+    if (transformation) {
+      for (var k of rot_objects)
+        camera_relative_movement(rot_about, k, transformation)
+      event.preventDefault()
+    }
+  }
+
+  document.addEventListener('keydown', handler);
+
+  document.addEventListener("mousemove", handler);
+  document.addEventListener("mousedown", handler);
+  document.addEventListener("mouseup", handler);
+
+  // rendering scene through the view of the camera
+  function render(time) {
+    time /= 1000; // convert milliseconds to seconds
+  
+    renderer.render(scene, camera);
+  
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+}
+
+function camera_relative_movement(position, camera, transformation) {
+  var matrixWorldInverse = camera.matrixWorldInverse || new THREE.Matrix4().getInverse(camera.matrixWorld)
+  var Oc = position.clone().applyMatrix4(matrixWorldInverse)
+  var T = new THREE.Matrix4()
+  T.setPosition(Oc)
+  var Ti = new THREE.Matrix4()
+  Ti.getInverse(T)
+  var Cn = new THREE.Matrix4()
+  Cn.premultiply(Ti)
+  Cn.premultiply(transformation)
+  Cn.premultiply(T)
+  Cn.premultiply(camera.matrix)
+  camera.matrix = Cn
+  camera.matrixAutoUpdate = false
+  camera.updateMatrixWorld(true)
+  //camera.updateWorldMatrix(true)
+  //camera.updateMatrix(true)
+}
+</script>

@@ -57,4 +57,12 @@ Veja mais: [Relatório sobre texturização do cilindro](9-cylider-texture-ref)
 
 ### Dia 3
 
-As outras quádricas
+Uma das coisas fazem falta é poder controlar manualmente
+os objetos na tela. Portanto, no terceiro dia vou adicionar
+controles usando o teclado e mouse.
+
+Além disso vou adicionar botões e caixas para poder configurar
+a figura na tela, permitir visualizar as várias formas de renderização,
+alterar texturas, cores e outras características.
+
+10. [Controles de teclado](10-keyboard-controls)
