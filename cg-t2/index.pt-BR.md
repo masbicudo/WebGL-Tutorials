@@ -32,7 +32,10 @@ Mais pra frente vou atualizar a parte da documentação em inglês.
 - a) [Normais manuais calculadas erroneamente](7a-custom-geometry-wrong-normals)
 - b) [Normais manuais corrigidas](7b-custom-geometry-normals)
 8. [Aramado e normais](8-geometry-wireframe-normals)
-9. [Texturizando o cilindro](9-texture)
+9. Texturizando o cilindro
+- a) [Problemas com a face circular](9a-texture-wrong)
+- b) [Tentativa de correção com divisão em anel + círculo pequeno](9b-texture-wrong-2)
+- c) [Correção com divisão em aneis de potências de 1/2 + círculo pequeno](9c-texture)
 
 ### Dia 2
 

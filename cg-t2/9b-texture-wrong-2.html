@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <head>
-    <title>#9 Textures</title>
+    <title>#9b Textures - wrong circular face (2nd try)</title>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.min.js"></script>
 </head>
 <body>
@@ -49,7 +49,7 @@ function main() {
   const mesh = new THREE.Mesh(geometry, material);
   geometry.computeBoundingSphere()
   console.log(geometry.boundingSphere.radius)
-  const normal_line_length = geometry.boundingSphere.radius / 4
+  const normal_line_length = geometry.boundingSphere.radius / 8
   const normals = new THREE.VertexNormalsHelper( mesh, normal_line_length )
   mesh.add(normals)
 
