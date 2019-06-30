@@ -22,6 +22,15 @@ Mais pra frente vou atualizar a parte da documentação em inglês.
 
 ### Dia 1
 
+No primeiro dia foi tudo bem simples. O THREE JS cuida
+de vários aspectos para o programador, que não tem que lidar
+com shaders, nem com a complexidade de carregar as faces
+na ordem correta.
+
+Também é bem símples lidar com iluminação,
+cores dos objetos, e renderização em vários formatos:
+iluminado, aramado, entre outros.
+
 1. [Cena simples](1-simple-scene)
 2. [Animando a cena](2-simple-animated-scene)
 3. [Iluminação simples](3-simple-lit-scene)
@@ -35,10 +44,17 @@ Mais pra frente vou atualizar a parte da documentação em inglês.
 
 ### Dia 2
 
-9. [Texturizando o cilindro](9-cylider-texture) [[ref](9-cylider-texture-ref)]
+No segundo dia, tive que lidar com as complexidades de mapear texturas.
+O principal problema é mapear texturas em superfícies que não
+possuem um mapeamento linear para as coordenadas de textura chamadas de UV.
+
+Veja mais: [Relatório sobre texturização do cilindro](9-cylider-texture-ref)
+
+9. [Texturizando o cilindro](9-cylider-texture)
 - a) [Problemas com a face circular](9a-texture-wrong)
 - b) [Tentativa de correção com divisão em anel + círculo pequeno](9b-texture-wrong-2)
 - c) [Correção com divisão em anéis de potências de fração](9c-texture)
 
 ### Dia 3
 
+As outras quádricas
