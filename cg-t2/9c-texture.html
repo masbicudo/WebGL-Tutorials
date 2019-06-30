@@ -1,4 +1,90 @@
-function createCylinderGeometry(r, h, a_steps, h_steps, a_tex_steps, r_steps, r_frac, compute_normals, compute_mappings) {
+<!DOCTYPE html>
+<head>
+    <title>#9c Textures - correct circular face</title>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.js"></script>
+</head>
+<body>
+  <h1></h1>
+  <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
+</body>
+<script type="text/javascript">
+'use strict'
+
+document.querySelector('h1').innerText = document.title
+main()
+
+function main() {
+  const canvas = document.querySelector('#canvas')
+  const renderer = new THREE.WebGLRenderer({canvas})
+
+  // camera
+  const fov = 75;
+  const aspect = canvas.clientWidth/canvas.clientHeight;
+  const near = 0.1;
+  const far = 10;
+  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+  camera.position.z = 4;
+
+  // load textures
+  const textureLoader = new THREE.TextureLoader();
+  const texture = textureLoader.load( 'uv_test_bw_1024.png' );
+  texture.encoding = THREE.sRGBEncoding
+  texture.anisotropy = 16
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+
+  // scene
+  const scene = new THREE.Scene();
+
+  // geometry
+  const geometry = createCylinderGeometry({
+    r_steps: 4,
+    r_frac: 1/2,
+    a_steps: 24,
+  })
+
+  // material
+  const material = new THREE.MeshPhongMaterial({
+      color: 0xFFFFFF,
+      map: texture,
+    });
+
+  // mesh
+  const mesh = new THREE.Mesh(geometry, material);
+  geometry.computeBoundingSphere()
+  console.log(geometry.boundingSphere.radius)
+  const normal_line_length = geometry.boundingSphere.radius / 32
+  const normals = new THREE.VertexNormalsHelper( mesh, normal_line_length )
+  mesh.add(normals)
+
+  // composing scene
+  scene.add(mesh);
+
+  // light source
+  {
+    const color = 0xFFFFFF;
+    const intensity = 1;
+    const light = new THREE.PointLight(color, intensity, 0, 2);
+    light.position.set(-1, 2, 4);
+    scene.add(light);
+  }
+
+  // rendering scene through the view of the camera
+  function render(time) {
+    time /= 1000; // convert milliseconds to seconds
+  
+    mesh.rotation.x = time;
+    mesh.rotation.y = time / 2;
+    mesh.rotation.y = time / 5;
+  
+    renderer.render(scene, camera);
+  
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+}
+
+function createCylinderGeometry(r, h, a_steps, h_steps, a_tex_steps, r_steps, r_frac) {
     /**
      * Cylinder Geometry function
      * @param {number?} r The radius of the cylinder
@@ -7,8 +93,6 @@ function createCylinderGeometry(r, h, a_steps, h_steps, a_tex_steps, r_steps, r_
      * @param {number?} h_steps Number of height divisions
      * @param {number?} r_steps Number of radial divisions for the circular face
      * @param {number?} r_frac Fraction used to subdivide the circular faces
-     * @param {number?} compute_normals Indicates whether to compute normals
-     * @param {number?} compute_mappings Indicates whether to compute texture mapping
      * r_steps and r_frac must be used to avoid texturing glitches at top and bottom circular faces
      * @returns {Geometry}
      */
@@ -22,8 +106,6 @@ function createCylinderGeometry(r, h, a_steps, h_steps, a_tex_steps, r_steps, r_
       a_tex_steps = args.a_tex_steps
       r_steps = args.r_steps
       r_frac = args.r_frac
-      compute_normals = args.compute_normals
-      compute_mappings = args.compute_mappings
     }
 
     // Cylinder
@@ -212,3 +294,4 @@ function createCylinderGeometry(r, h, a_steps, h_steps, a_tex_steps, r_steps, r_
     geometry.uvsNeedUpdate = true
     return geometry
 }
+</script>
