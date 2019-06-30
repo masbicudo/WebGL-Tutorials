@@ -6,10 +6,11 @@ layout: default
 What is this?
 =============
 
-This is my WebGL Tutorial prototype. As I learn techniques and the API itself,
-I will try to post how I learnt it, and of course, give code examples.
+This is my WebGL Tutorial prototype. As I learn the API itself,
+techniques and related libraries, I will try to post how I learnt it,
+and of course, give code examples.
 
-These are some interesting things I did using WebGL:
+These are some interesting things I did using WebGL and libs:
 
 - [Basics](basics)
 - [Volumetric wood texture](3d-textures/1-wood)
