@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <head>
-    <title>#9c Textures - correct circular face (unaligned texture)</title>
+    <title>#9 Textures - correct circular face (aligned texture)</title>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.js"></script>
 </head>
 <body>
@@ -27,7 +27,7 @@ function main() {
 
   // load textures
   const textureLoader = new THREE.TextureLoader();
-  const texture = textureLoader.load( 'checkerboard.png' );
+  const texture = textureLoader.load( 'uv_test_bw_1024.png' );
   texture.encoding = THREE.sRGBEncoding
   texture.anisotropy = 16
   texture.wrapS = THREE.RepeatWrapping;
@@ -38,6 +38,9 @@ function main() {
 
   // geometry
   const geometry = createCylinderGeometry({
+    r_steps: 4,
+    r_frac: 1/2,
+    a_steps: 24,
   })
 
   // material
