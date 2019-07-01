@@ -373,7 +373,7 @@
     })
 
     function handle_edge_visualization_event(event) {
-      scene.remove(edge_mesh)
+      mesh.remove(edge_mesh)
       var angle = parseFloat(num_edge_angle.value)
 
       if (rad_angle_unit_deg.checked) ;
@@ -388,7 +388,7 @@
       edge_material = new THREE.LineBasicMaterial({ color: "#FFFFFF" });
       edge_mesh = new THREE.LineSegments(edge_geometry, edge_material);
       edge_mesh.visible = chk_edges.checked
-      scene.add(edge_mesh)
+      mesh.add(edge_mesh)
     }
     num_edge_angle.addEventListener("change", handle_edge_visualization_event)
     rad_angle_unit_deg.addEventListener("change", handle_edge_visualization_event)
