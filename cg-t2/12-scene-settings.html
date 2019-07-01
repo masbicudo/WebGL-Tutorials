@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <head>
-  <title>#12 Wireframe, edges and normals</title>
+  <title>#12 Wireframe, edges, normals and material types</title>
   <link rel="stylesheet" href="main.css" type="text/css" media="all" />
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.js"></script>
   <script type="text/javascript" src="custom-geometries.js"></script>
@@ -74,26 +74,25 @@
           <input type="number" id="num_edge_angle" name="num_edge_angle" value="1">
         </label>
         <div class="switch-field">
-          <input type="radio" id="rad_angle_unit_1" name="rad_angle_unit" value="deg" checked />
-          <label for="rad_angle_unit_1">° (degree)</label>
-          <input type="radio" id="rad_angle_unit_2" name="rad_angle_unit" value="rad" />
-          <label for="rad_angle_unit_2">rad (radians)</label>
-          <input type="radio" id="rad_angle_unit_3" name="rad_angle_unit" value="pi_rad" />
-          <label for="rad_angle_unit_3">𝜋 rad (pi radians)</label>
+          <input type="radio" id="rad_angle_unit_deg" name="rad_angle_unit" value="deg" checked />
+          <label for="rad_angle_unit_deg">° (degree)</label>
+          <input type="radio" id="rad_angle_unit_rad" name="rad_angle_unit" value="rad" />
+          <label for="rad_angle_unit_rad">rad (radians)</label>
+          <input type="radio" id="rad_angle_unit_pi_rad" name="rad_angle_unit" value="pi_rad" />
+          <label for="rad_angle_unit_pi_rad">𝜋 rad (pi radians)</label>
         </div>
       </p>
+      <h4>Normals</h4>
       <p>
-        <div class="switch-field">
-          <input type="radio" id="rad_norm_none" name="rad_normal" value="none" checked />
-          <label for="rad_norm_none">none</label>
-          <input type="radio" id="rad_norm_edge" name="rad_normal" value="edge" />
-          <label for="rad_norm_edge">at edges</label>
-          <input type="radio" id="rad_norm_face" name="rad_normal" value="face" />
-          <label for="rad_norm_face">at faces</label>
-        </div>
-        <label for="num_edge_angle">
-          normal size:
-          <input type="number" id="num_normal_sz" name="num_normal_sz" value="0.2" step="0.1" min="0">
+        <label for="chk_vertex_normals">
+          <input type="checkbox" id="chk_vertex_normals" name="chk_vertex_normals" />
+          display vertex normals
+        </label>
+      </p>
+      <p>
+        <label for="chk_face_normals">
+          <input type="checkbox" id="chk_face_normals" name="chk_face_normals" />
+          display face normals
         </label>
       </p>
     </div>
@@ -145,6 +144,7 @@
       r_frac: 1 / 2,
       a_steps: 24,
     })
+    geometry.computeFaceNormals()
 
     // material and texture
     function load_texture(name) {
@@ -164,11 +164,31 @@
 
     // mesh
     const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+
+    // bounding sphere
     geometry.computeBoundingSphere()
-    console.log(geometry.boundingSphere.radius)
-    const normal_line_length = geometry.boundingSphere.radius / 32
-    const normals = new THREE.VertexNormalsHelper(mesh, normal_line_length)
-    mesh.add(normals)
+    const bounding_sphere_mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(geometry.boundingSphere.radius, 16, 12),
+      new THREE.MeshBasicMaterial({color: "#FFFFFF", wireframe: true})
+    )
+    bounding_sphere_mesh.visible = false
+
+    // bounding box
+    geometry.computeBoundingBox()
+    const bounding_box_mesh = new THREE.BoxHelper(mesh)
+    bounding_box_mesh.visible = false
+
+    // normals
+    const default_normal_line_length = geometry.boundingSphere.radius / 8
+    const normals = new THREE.VertexNormalsHelper(mesh, default_normal_line_length)
+    normals.visible = false
+    scene.add(normals)
+
+    // face normals
+    var face_normals = new THREE.FaceNormalsHelper(mesh, default_normal_line_length)
+    face_normals.visible = false
+    scene.add(face_normals)
 
     // edges geometry
     // https://stackoverflow.com/questions/20153705/three-js-wireframe-material-all-polygons-vs-just-edges
@@ -177,9 +197,6 @@
     var edge_mesh = new THREE.LineSegments(edge_geometry, edge_material);
     edge_mesh.visible = false
     scene.add(edge_mesh)
-
-    // composing scene
-    scene.add(mesh);
 
     // light source
     const color = 0xFFFFFF;
@@ -335,13 +352,13 @@
       scene.remove(edge_mesh)
       var angle = parseFloat(num_edge_angle.value)
 
-      if (rad_angle_unit_1.checked) ;
-      if (rad_angle_unit_2.checked) angle = angle*180/Math.PI
-      if (rad_angle_unit_3.checked) angle = angle*180
+      if (rad_angle_unit_deg.checked) ;
+      if (rad_angle_unit_rad.checked) angle = angle*180/Math.PI
+      if (rad_angle_unit_pi_rad.checked) angle = angle*180
 
-      if (rad_angle_unit_1.checked) num_edge_angle.step = 1
-      if (rad_angle_unit_2.checked) num_edge_angle.step = 1/180*Math.PI
-      if (rad_angle_unit_3.checked) num_edge_angle.step = 1/180
+      if (rad_angle_unit_deg.checked) num_edge_angle.step = 1
+      if (rad_angle_unit_rad.checked) num_edge_angle.step = 1/180*Math.PI
+      if (rad_angle_unit_pi_rad.checked) num_edge_angle.step = 1/180
 
       edge_geometry = new THREE.EdgesGeometry(geometry, angle)
       edge_material = new THREE.LineBasicMaterial({ color: "#FFFFFF" });
@@ -350,9 +367,16 @@
       scene.add(edge_mesh)
     }
     num_edge_angle.addEventListener("change", handle_edge_visualization_event)
-    rad_angle_unit_1.addEventListener("change", handle_edge_visualization_event)
-    rad_angle_unit_2.addEventListener("change", handle_edge_visualization_event)
-    rad_angle_unit_3.addEventListener("change", handle_edge_visualization_event)
+    rad_angle_unit_deg.addEventListener("change", handle_edge_visualization_event)
+    rad_angle_unit_rad.addEventListener("change", handle_edge_visualization_event)
+    rad_angle_unit_pi_rad.addEventListener("change", handle_edge_visualization_event)
+
+    function handle_norm_vis_event(event) {
+      normals.visible = chk_vertex_normals.checked
+      face_normals.visible = chk_face_normals.checked
+    }
+    chk_vertex_normals.addEventListener("change", handle_norm_vis_event)
+    chk_face_normals.addEventListener("change", handle_norm_vis_event)
 
     // rendering scene through the view of the camera
     function render(time) {

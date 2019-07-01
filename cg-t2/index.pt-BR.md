@@ -81,4 +81,4 @@ Veja mais: [Relatório sobre rotação usando teclado e mouse](10-keyboard-mouse
 
 10. [Rotação de câmera, objeto e luzes usando teclado e mouse](10-keyboard-mouse-rotation-control)
 11. [Configurações de cor, textura e outras](11-scene-settings)
-12. [Ligar/desligar aramado, normais, eixos e método de iluminação](12-scene-settings)
+12. [Configuração de aramado, arestas, normais e materiais](12-scene-settings)
