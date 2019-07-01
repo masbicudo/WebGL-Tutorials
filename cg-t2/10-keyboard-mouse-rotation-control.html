@@ -161,7 +161,7 @@ function main() {
 
     if (transformation) {
       for (var k of rot_objects)
-        camera_relative_movement(rot_about, k, transformation)
+        object_relative_movement(rot_about, k, transformation)
       event.preventDefault()
     }
   }
@@ -183,8 +183,14 @@ function main() {
   requestAnimationFrame(render);
 }
 
-function camera_relative_movement(position, camera, transformation) {
-  var matrixWorldInverse = camera.matrixWorldInverse || new THREE.Matrix4().getInverse(camera.matrixWorld)
+function object_relative_movement(position, object, transformation) {
+    /**
+     * Performs a relative movement given a referece point, an object and the transformation do apply.
+     * @param {Vertex3} position The reference position for the transformation.
+     * @param {Mesh|Camera|Light} object The object that will be rotated about the given position.
+     * @param {Matrix4} transformation The matrix representing the transformation that will be applied to the object.
+     */
+  var matrixWorldInverse = object.matrixWorldInverse || new THREE.Matrix4().getInverse(object.matrixWorld)
   var Oc = position.clone().applyMatrix4(matrixWorldInverse)
   var T = new THREE.Matrix4()
   T.setPosition(Oc)
@@ -194,11 +200,9 @@ function camera_relative_movement(position, camera, transformation) {
   Cn.premultiply(Ti)
   Cn.premultiply(transformation)
   Cn.premultiply(T)
-  Cn.premultiply(camera.matrix)
-  camera.matrix = Cn
-  camera.matrixAutoUpdate = false
-  camera.updateMatrixWorld(true)
-  //camera.updateWorldMatrix(true)
-  //camera.updateMatrix(true)
+  Cn.premultiply(object.matrix)
+  object.matrix = Cn
+  object.matrixAutoUpdate = false
+  object.updateMatrixWorld(true)
 }
 </script>

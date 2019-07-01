@@ -57,7 +57,7 @@ Veja mais: [Relatório sobre texturização do cilindro](9-cylider-texture-ref)
 
 ### Dia 3
 
-Uma das coisas fazem falta é poder controlar manualmente
+Uma das coisas que fazem falta é poder controlar manualmente
 os objetos na tela. Portanto, no terceiro dia vou adicionar
 controles usando o teclado e mouse.
 
@@ -65,4 +65,7 @@ Além disso vou adicionar botões e caixas para poder configurar
 a figura na tela, permitir visualizar as várias formas de renderização,
 alterar texturas, cores e outras características.
 
+Veja mais: [Relatório sobre rotação usando teclado e mouse](10-keyboard-mouse-rotation-control-ref)
+
 10. [Rotação de câmera, objeto e luzes usando teclado e mouse](10-keyboard-mouse-rotation-control)
+11. [Configurações de cor, textura e outras](11-scene-settings)
