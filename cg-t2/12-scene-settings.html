@@ -190,24 +190,20 @@
       new THREE.MeshBasicMaterial({color: "#0088AA", wireframe: true})
     )
     bounding_sphere_mesh.visible = false
-    mesh.add(bounding_sphere_mesh)
 
     // bounding box
     geometry.computeBoundingBox()
     const bounding_box_mesh = new THREE.BoxHelper(mesh, "#0000FF")
     bounding_box_mesh.visible = false
-    mesh.add(bounding_box_mesh)
 
     // normals
     const default_normal_line_length = geometry.boundingSphere.radius / 8
     const normals = new THREE.VertexNormalsHelper(mesh, default_normal_line_length)
     normals.visible = false
-    mesh.add(normals)
 
     // face normals
     var face_normals = new THREE.FaceNormalsHelper(mesh, default_normal_line_length)
     face_normals.visible = false
-    mesh.add(face_normals)
 
     // edges geometry
     // https://stackoverflow.com/questions/20153705/three-js-wireframe-material-all-polygons-vs-just-edges
@@ -215,7 +211,13 @@
     var edge_material = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
     var edge_mesh = new THREE.LineSegments(edge_geometry, edge_material);
     edge_mesh.visible = false
+
+    // composing mesh
     mesh.add(edge_mesh)
+    mesh.add(bounding_sphere_mesh)
+    mesh.add(bounding_box_mesh)
+    mesh.add(normals)
+    mesh.add(face_normals)
 
     // light source
     const color = 0xFFFFFF;
