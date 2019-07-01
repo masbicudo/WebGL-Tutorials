@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <head>
-  <title>#12 Wireframe, edges, normals and material types</title>
+  <title>#12 Wireframe settings and material types</title>
   <link rel="stylesheet" href="main.css" type="text/css" media="all" />
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.js"></script>
   <script type="text/javascript" src="custom-geometries.js"></script>
@@ -95,6 +95,19 @@
           display face normals
         </label>
       </p>
+      <h4>Bounding box/sphere</h4>
+      <p>
+        <label for="chk_bbox">
+          <input type="checkbox" id="chk_bbox" name="chk_bbox" />
+          display bounding box
+        </label>
+      </p>
+      <p>
+        <label for="chk_bsphere">
+          <input type="checkbox" id="chk_bsphere" name="chk_bsphere" />
+          display bounding sphere
+        </label>
+      </p>
     </div>
     <div style="display: inline-block; vertical-align: top; margin-left: 1em;">
       <h2>Controls</h2>
@@ -170,14 +183,16 @@
     geometry.computeBoundingSphere()
     const bounding_sphere_mesh = new THREE.Mesh(
       new THREE.SphereGeometry(geometry.boundingSphere.radius, 16, 12),
-      new THREE.MeshBasicMaterial({color: "#FFFFFF", wireframe: true})
+      new THREE.MeshBasicMaterial({color: "#0088AA", wireframe: true})
     )
     bounding_sphere_mesh.visible = false
+    scene.add(bounding_sphere_mesh)
 
     // bounding box
     geometry.computeBoundingBox()
-    const bounding_box_mesh = new THREE.BoxHelper(mesh)
+    const bounding_box_mesh = new THREE.BoxHelper(mesh, "#0000FF")
     bounding_box_mesh.visible = false
+    scene.add(bounding_box_mesh)
 
     // normals
     const default_normal_line_length = geometry.boundingSphere.radius / 8
@@ -374,9 +389,13 @@
     function handle_norm_vis_event(event) {
       normals.visible = chk_vertex_normals.checked
       face_normals.visible = chk_face_normals.checked
+      bounding_box_mesh.visible = chk_bbox.checked
+      bounding_sphere_mesh.visible = chk_bsphere.checked
     }
     chk_vertex_normals.addEventListener("change", handle_norm_vis_event)
     chk_face_normals.addEventListener("change", handle_norm_vis_event)
+    chk_bbox.addEventListener("change", handle_norm_vis_event)
+    chk_bsphere.addEventListener("change", handle_norm_vis_event)
 
     // rendering scene through the view of the camera
     function render(time) {
