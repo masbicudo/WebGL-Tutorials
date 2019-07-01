@@ -1,61 +1,65 @@
 <!DOCTYPE html>
+
 <head>
-    <title>#2 Simple animated scene</title>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.min.js"></script>
+  <title>#2 Simple animated scene</title>
+  <link rel="stylesheet" href="main.css" type="text/css" media="all" />
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.min.js"></script>
+  <script type="text/javascript" src="layout.js"></script>
 </head>
+
 <body>
-  <h1></h1>
-  <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
+  <div class="page-heading"><h1></h1><a href="index.pt-BR">Back to main page</a></div>
+  <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="720" height="690"></canvas></div>
 </body>
 <script type="text/javascript">
-'use strict'
+  'use strict'
 
-document.querySelector('h1').innerText = document.title
-main()
+  document.querySelector('h1').innerText = document.title
+  main()
 
-function main() {
-  const canvas = document.querySelector('#canvas')
-  const renderer = new THREE.WebGLRenderer({canvas})
+  function main() {
+    const canvas = document.querySelector('#canvas')
+    const renderer = new THREE.WebGLRenderer({ canvas })
 
-  // camera
-  const fov = 75;
-  const aspect = canvas.clientWidth/canvas.clientHeight;
-  const near = 0.1;
-  const far = 5;
-  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-  camera.position.z = 2;
+    // camera
+    const fov = 75;
+    const aspect = canvas.clientWidth / canvas.clientHeight;
+    const near = 0.1;
+    const far = 5;
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.z = 2;
 
-  // scene
-  const scene = new THREE.Scene();
+    // scene
+    const scene = new THREE.Scene();
 
-  // geometry
-  const boxWidth = 1;
-  const boxHeight = 1;
-  const boxDepth = 1;
-  const geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
+    // geometry
+    const boxWidth = 1;
+    const boxHeight = 1;
+    const boxDepth = 1;
+    const geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
 
-  // material
-  const material = new THREE.MeshBasicMaterial({color: 0xFFFFFF});
+    // material
+    const material = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
 
-  // mesh
-  const cube = new THREE.Mesh(geometry, material);
+    // mesh
+    const cube = new THREE.Mesh(geometry, material);
 
-  // composing scene
-  scene.add(cube);
+    // composing scene
+    scene.add(cube);
 
-  // rendering scene through the view of the camera
-  function render(time) {
-    time /= 1000; // convert milliseconds to seconds
-  
-    cube.rotation.x = time;
-    cube.rotation.y = time / 2;
-    cube.rotation.y = time / 5;
-  
-    renderer.render(scene, camera);
-  
+    // rendering scene through the view of the camera
+    function render(time) {
+      time /= 1000; // convert milliseconds to seconds
+
+      cube.rotation.x = time;
+      cube.rotation.y = time / 2;
+      cube.rotation.y = time / 5;
+
+      renderer.render(scene, camera);
+
+      requestAnimationFrame(render);
+    }
     requestAnimationFrame(render);
   }
-  requestAnimationFrame(render);
-}
 
 </script>

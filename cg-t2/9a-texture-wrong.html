@@ -1,86 +1,90 @@
 <!DOCTYPE html>
+
 <head>
-    <title>#9a Textures - wrong circular face</title>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.min.js"></script>
+  <title>#9a Textures - wrong circular face</title>
+  <link rel="stylesheet" href="main.css" type="text/css" media="all" />
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.min.js"></script>
+  <script type="text/javascript" src="layout.js"></script>
 </head>
+
 <body>
-  <h1></h1>
-  <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
+  <div class="page-heading"><h1></h1><a href="index.pt-BR">Back to main page</a></div>
+  <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="720" height="690"></canvas></div>
 </body>
 <script type="text/javascript">
-'use strict'
+  'use strict'
 
-document.querySelector('h1').innerText = document.title
-main()
+  document.querySelector('h1').innerText = document.title
+  main()
 
-function main() {
-  const canvas = document.querySelector('#canvas')
-  const renderer = new THREE.WebGLRenderer({canvas})
+  function main() {
+    const canvas = document.querySelector('#canvas')
+    const renderer = new THREE.WebGLRenderer({ canvas })
 
-  // camera
-  const fov = 75;
-  const aspect = canvas.clientWidth/canvas.clientHeight;
-  const near = 0.1;
-  const far = 10;
-  const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-  camera.position.z = 4;
+    // camera
+    const fov = 75;
+    const aspect = canvas.clientWidth / canvas.clientHeight;
+    const near = 0.1;
+    const far = 10;
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.z = 4;
 
-  // load textures
-  const textureLoader = new THREE.TextureLoader();
-  const texture = textureLoader.load( 'checkerboard.png' );
-  texture.encoding = THREE.sRGBEncoding
-  texture.anisotropy = 16
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
+    // load textures
+    const textureLoader = new THREE.TextureLoader();
+    const texture = textureLoader.load('checkerboard.png');
+    texture.encoding = THREE.sRGBEncoding
+    texture.anisotropy = 16
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
 
-  // scene
-  const scene = new THREE.Scene();
+    // scene
+    const scene = new THREE.Scene();
 
-  // geometry
-  const geometry = createCylinderGeometry()
+    // geometry
+    const geometry = createCylinderGeometry()
 
-  // material
-  const material = new THREE.MeshPhongMaterial({
+    // material
+    const material = new THREE.MeshPhongMaterial({
       color: 0xFFFFFF,
       map: texture,
     });
 
-  // mesh
-  const mesh = new THREE.Mesh(geometry, material);
-  geometry.computeBoundingSphere()
-  console.log(geometry.boundingSphere.radius)
-  const normal_line_length = geometry.boundingSphere.radius / 8
-  const normals = new THREE.VertexNormalsHelper( mesh, normal_line_length )
-  mesh.add(normals)
+    // mesh
+    const mesh = new THREE.Mesh(geometry, material);
+    geometry.computeBoundingSphere()
+    console.log(geometry.boundingSphere.radius)
+    const normal_line_length = geometry.boundingSphere.radius / 8
+    const normals = new THREE.VertexNormalsHelper(mesh, normal_line_length)
+    mesh.add(normals)
 
-  // composing scene
-  scene.add(mesh);
+    // composing scene
+    scene.add(mesh);
 
-  // light source
-  {
-    const color = 0xFFFFFF;
-    const intensity = 1;
-    const light = new THREE.PointLight(color, intensity, 0, 2);
-    light.position.set(-1, 2, 4);
-    scene.add(light);
-  }
+    // light source
+    {
+      const color = 0xFFFFFF;
+      const intensity = 1;
+      const light = new THREE.PointLight(color, intensity, 0, 2);
+      light.position.set(-1, 2, 4);
+      scene.add(light);
+    }
 
-  // rendering scene through the view of the camera
-  function render(time) {
-    time /= 1000; // convert milliseconds to seconds
-  
-    mesh.rotation.x = time;
-    mesh.rotation.y = time / 2;
-    mesh.rotation.y = time / 5;
-  
-    renderer.render(scene, camera);
-  
+    // rendering scene through the view of the camera
+    function render(time) {
+      time /= 1000; // convert milliseconds to seconds
+
+      mesh.rotation.x = time;
+      mesh.rotation.y = time / 2;
+      mesh.rotation.y = time / 5;
+
+      renderer.render(scene, camera);
+
+      requestAnimationFrame(render);
+    }
     requestAnimationFrame(render);
   }
-  requestAnimationFrame(render);
-}
 
-function createCylinderGeometry(r, h, r_steps, h_steps, r_tex_steps) {
+  function createCylinderGeometry(r, h, r_steps, h_steps, r_tex_steps) {
     // Cylinder
     // ========
     //
@@ -105,116 +109,116 @@ function createCylinderGeometry(r, h, r_steps, h_steps, r_tex_steps) {
     v.push(new THREE.Vector3(0, 0, -0.5 * h))
     v.push(new THREE.Vector3(0, 0, +0.5 * h))
     for (var h_it = 0; h_it <= h_steps; h_it++) {
-        var h_val = (h_it / h_steps - 0.5) * h
-        for (var r_it = 0; r_it < r_steps; r_it++) {
-            var r_val = r_it / r_steps * 2 * Math.PI
-            // cosine and sine
-            var c = Math.cos(r_val)
-            var s = Math.sin(r_val)
-            // coords
-            var x = c * r
-            var y = s * r
-            var z = h_val
-            // point and normal
-            var p = new THREE.Vector3(x, y, z)
-            var n = new THREE.Vector3(c, s, 0)
-            v.push(p)
-            if (h_it == 0) rnv.push(n)
-        }
+      var h_val = (h_it / h_steps - 0.5) * h
+      for (var r_it = 0; r_it < r_steps; r_it++) {
+        var r_val = r_it / r_steps * 2 * Math.PI
+        // cosine and sine
+        var c = Math.cos(r_val)
+        var s = Math.sin(r_val)
+        // coords
+        var x = c * r
+        var y = s * r
+        var z = h_val
+        // point and normal
+        var p = new THREE.Vector3(x, y, z)
+        var n = new THREE.Vector3(c, s, 0)
+        v.push(p)
+        if (h_it == 0) rnv.push(n)
+      }
     }
     for (var h_it = 0; h_it < h_steps; h_it++) {
-        for (var r_it = 0; r_it < r_steps; r_it++) {
-            var a = 2 + (r_it + 0) % r_steps + ((h_it + 0) * r_steps)
-            var b = 2 + (r_it + 0) % r_steps + ((h_it + 1) * r_steps)
-            var c = 2 + (r_it + 1) % r_steps + ((h_it + 0) * r_steps)
-            var d = 2 + (r_it + 1) % r_steps + ((h_it + 1) * r_steps)
+      for (var r_it = 0; r_it < r_steps; r_it++) {
+        var a = 2 + (r_it + 0) % r_steps + ((h_it + 0) * r_steps)
+        var b = 2 + (r_it + 0) % r_steps + ((h_it + 1) * r_steps)
+        var c = 2 + (r_it + 1) % r_steps + ((h_it + 0) * r_steps)
+        var d = 2 + (r_it + 1) % r_steps + ((h_it + 1) * r_steps)
 
-            // Faces obey the right hand rule to determine what side is the front side
-            // The thumb indicates where is the front face direction.
-            // The other fingers indicate the order of the input vertices.
-            // 
-            // This is the organization of the vertices a, b, c and d:
-            //   b---d  This represents the order of the vertices over the cylinder,
-            //   |   |  as if we were looking to it from the outside. So we want to
-            //   a---c  order them in a counter-clockwise way: ⭯
-            //
-            // First triangle: c->b->a   Second triangle: b->c->d
-            //   b                         b 🡐 d
-            //   🡓 🡔                         🡖 🡑
-            //   a 🡒 c                         c
-            //
-            // Example with r_steps = 4, h_steps = 4
-            //
-            //         1 - center top
-            //
-            //   18  19  20  21 - top circle
-            //
-            //   14  15  16  17
-            //
-            //   10  11  12  13
-            //
-            //    6   7   8   9
-            //
-            //    2   3   4   5 - bottom circle
-            //
-            //          0 - center bottom
+        // Faces obey the right hand rule to determine what side is the front side
+        // The thumb indicates where is the front face direction.
+        // The other fingers indicate the order of the input vertices.
+        // 
+        // This is the organization of the vertices a, b, c and d:
+        //   b---d  This represents the order of the vertices over the cylinder,
+        //   |   |  as if we were looking to it from the outside. So we want to
+        //   a---c  order them in a counter-clockwise way: ⭯
+        //
+        // First triangle: c->b->a   Second triangle: b->c->d
+        //   b                         b 🡐 d
+        //   🡓 🡔                         🡖 🡑
+        //   a 🡒 c                         c
+        //
+        // Example with r_steps = 4, h_steps = 4
+        //
+        //         1 - center top
+        //
+        //   18  19  20  21 - top circle
+        //
+        //   14  15  16  17
+        //
+        //   10  11  12  13
+        //
+        //    6   7   8   9
+        //
+        //    2   3   4   5 - bottom circle
+        //
+        //          0 - center bottom
 
-            // Normals
-            //
-            // The normals are calculated and placed inside the `rnv` array.
-            // The correspondence between edges and indices in the rnv array is as follows:
-            //  a -> (r_it + 0)%r_steps
-            //  b -> (r_it + 0)%r_steps
-            //  c -> (r_it + 1)%r_steps
-            //  d -> (r_it + 1)%r_steps
-            var r0 = (r_it + 0)%r_steps
-            var r1 = (r_it + 1)%r_steps
+        // Normals
+        //
+        // The normals are calculated and placed inside the `rnv` array.
+        // The correspondence between edges and indices in the rnv array is as follows:
+        //  a -> (r_it + 0)%r_steps
+        //  b -> (r_it + 0)%r_steps
+        //  c -> (r_it + 1)%r_steps
+        //  d -> (r_it + 1)%r_steps
+        var r0 = (r_it + 0) % r_steps
+        var r1 = (r_it + 1) % r_steps
 
-            // Texture
-            //
-            // The number of h_steps will tell us the number of times the texture will be repeated.
-            // The number of r_tex_steps tells the number of times the texture will be repeated radially.
-            // The top and bottom textures are somewhat different, we would have to map 2 texture points
-            // to the single point at the center of the circular surface.
-            // This cannot be done... so the texture will present glitches.
-            // To overcome that, I am going to subdivide each circular surface in many concentric rings,
-            // with radius of powers of 1/2: 0.5; 0.25; 0.125; 0.06125
-            var t0 = (r_it + 0) / r_steps * r_tex_steps
-            var t1 = (r_it + 1) / r_steps * r_tex_steps
+        // Texture
+        //
+        // The number of h_steps will tell us the number of times the texture will be repeated.
+        // The number of r_tex_steps tells the number of times the texture will be repeated radially.
+        // The top and bottom textures are somewhat different, we would have to map 2 texture points
+        // to the single point at the center of the circular surface.
+        // This cannot be done... so the texture will present glitches.
+        // To overcome that, I am going to subdivide each circular surface in many concentric rings,
+        // with radius of powers of 1/2: 0.5; 0.25; 0.125; 0.06125
+        var t0 = (r_it + 0) / r_steps * r_tex_steps
+        var t1 = (r_it + 1) / r_steps * r_tex_steps
 
-            geometry.faces.push(new THREE.Face3(c, b, a, [rnv[r1], rnv[r0], rnv[r0]]))
-            geometry.faceVertexUvs[0].push([
-                new THREE.Vector2(t1, 0),
-                new THREE.Vector2(t0, 1),
-                new THREE.Vector2(t0, 0),
-              ])
+        geometry.faces.push(new THREE.Face3(c, b, a, [rnv[r1], rnv[r0], rnv[r0]]))
+        geometry.faceVertexUvs[0].push([
+          new THREE.Vector2(t1, 0),
+          new THREE.Vector2(t0, 1),
+          new THREE.Vector2(t0, 0),
+        ])
 
-            geometry.faces.push(new THREE.Face3(b, c, d, [rnv[r0], rnv[r1], rnv[r1]]))
-            geometry.faceVertexUvs[0].push([
-                new THREE.Vector2(t0, 1),
-                new THREE.Vector2(t1, 0),
-                new THREE.Vector2(t1, 1),
-              ])
+        geometry.faces.push(new THREE.Face3(b, c, d, [rnv[r0], rnv[r1], rnv[r1]]))
+        geometry.faceVertexUvs[0].push([
+          new THREE.Vector2(t0, 1),
+          new THREE.Vector2(t1, 0),
+          new THREE.Vector2(t1, 1),
+        ])
 
-            if (h_it == 0) {
-              geometry.faces.push(new THREE.Face3(0, c, a, [zdn, zdn, zdn]))
-              geometry.faceVertexUvs[0].push([
-                new THREE.Vector2((t0+t1)/2, 0),
-                new THREE.Vector2(t1, 1),
-                new THREE.Vector2(t0, 1),
-              ])
-            }
-            if (h_it == h_steps - 1) {
-              geometry.faces.push(new THREE.Face3(1, b, d, [zup, zup, zup]))
-              geometry.faceVertexUvs[0].push([
-                new THREE.Vector2((t0+t1)/2, 1),
-                new THREE.Vector2(t0, 0),
-                new THREE.Vector2(t1, 0),
-              ])
-            }
+        if (h_it == 0) {
+          geometry.faces.push(new THREE.Face3(0, c, a, [zdn, zdn, zdn]))
+          geometry.faceVertexUvs[0].push([
+            new THREE.Vector2((t0 + t1) / 2, 0),
+            new THREE.Vector2(t1, 1),
+            new THREE.Vector2(t0, 1),
+          ])
         }
+        if (h_it == h_steps - 1) {
+          geometry.faces.push(new THREE.Face3(1, b, d, [zup, zup, zup]))
+          geometry.faceVertexUvs[0].push([
+            new THREE.Vector2((t0 + t1) / 2, 1),
+            new THREE.Vector2(t0, 0),
+            new THREE.Vector2(t1, 0),
+          ])
+        }
+      }
     }
     geometry.uvsNeedUpdate = true
     return geometry
-}
+  }
 </script>
