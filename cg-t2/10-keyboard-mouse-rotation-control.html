@@ -1,12 +1,39 @@
 <!DOCTYPE html>
 <head>
-    <title>#10 Keyboard controls - arcball</title>
+    <title>#10 Keyboard controls - rotating camera, object and light</title>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.js"></script>
     <script type="text/javascript" src="custom-geometries.js"></script>
+    <link rel="stylesheet" href="kbd.css" type="text/css" media="all" />
+    <style>
+    kbd {
+      font-size: 1em;
+      padding: 0.5em;
+      vertical-align: middle;
+      margin: 0.3em;
+      display: inline-block;
+    }
+    </style>
 </head>
 <body>
   <h1></h1>
-  <div style="display: inline-block;"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
+  <div>
+    <div style="display: inline-block; vertical-align: top"><canvas id="canvas" style="border:none" width="600" height="800" /></div>
+    <div style="display: inline-block; vertical-align: top; margin-left: 1em;">
+      <h2>Controls</h2>
+      <h3>Mouse</h3>
+      <div>Press any button and move the mouse over the scene.</div>
+      <h3>Keyboard</h3>
+      <div><kbd>A</kbd> rotate right relative to object</div>
+      <div><kbd>D</kbd> rotate left relative to object</div>
+      <div><kbd>W</kbd> rotate down relative to object</div>
+      <div><kbd>S</kbd> rotate up relative to object</div>
+      <div><kbd>Q</kbd> roll left relative to object</div>
+      <div><kbd>E</kbd> roll right relative to object</div>
+      <h3>Modifier keys</h3>
+      <div><kbd>shift</kbd> move light</div>
+      <div><kbd>alt</kbd> move object</div>
+    </div>
+  </div>
 </body>
 <script type="text/javascript">
 'use strict'
@@ -141,9 +168,9 @@ function main() {
 
   document.addEventListener('keydown', handler);
 
-  document.addEventListener("mousemove", handler);
-  document.addEventListener("mousedown", handler);
-  document.addEventListener("mouseup", handler);
+  canvas.addEventListener("mousemove", handler);
+  canvas.addEventListener("mousedown", handler);
+  canvas.addEventListener("mouseup", handler);
 
   // rendering scene through the view of the camera
   function render(time) {

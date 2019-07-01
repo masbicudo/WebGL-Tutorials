@@ -65,4 +65,4 @@ Além disso vou adicionar botões e caixas para poder configurar
 a figura na tela, permitir visualizar as várias formas de renderização,
 alterar texturas, cores e outras características.
 
-10. [Controles de teclado](10-keyboard-controls)
+10. [Rotação de câmera, objeto e luzes usando teclado e mouse](10-keyboard-mouse-rotation-control)
