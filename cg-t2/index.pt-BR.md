@@ -20,6 +20,18 @@ Mais pra frente vou atualizar a parte da documentação em inglês.
 
 # Linha do tempo
 
+Esse trabalho foi feito em forma de linha de tempo. Isso quer dizer
+que cada item da sequência é baseado no item anterior, então a
+qualidade do código em geral vai melhorando a medida que avançamos
+nos exemplos.
+
+Pretendo melhorar o código de cada passo com o tempo, e talvez
+transformar isso numa forma de tutorial. Eu queria que cada
+exemplo tivesse no HTML somente o código pertinente ao exemplo,
+e mover outras dependências para um arquivo JS externo...
+mas por enquanto não está assim, todo o código está dentro
+de cada HTML.
+
 ### Dia 1
 
 No primeiro dia foi tudo bem simples. O THREE JS cuida
@@ -69,3 +81,4 @@ Veja mais: [Relatório sobre rotação usando teclado e mouse](10-keyboard-mouse
 
 10. [Rotação de câmera, objeto e luzes usando teclado e mouse](10-keyboard-mouse-rotation-control)
 11. [Configurações de cor, textura e outras](11-scene-settings)
+12. [Ligar/desligar aramado, normais, eixos e método de iluminação](12-scene-settings)

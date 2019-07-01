@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+
+<head>
+  <title>#12 Wireframe, edges and normals</title>
+  <link rel="stylesheet" href="main.css" type="text/css" media="all" />
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/106/three.js"></script>
+  <script type="text/javascript" src="custom-geometries.js"></script>
+  <script type="text/javascript" src="html5kellycolorpicker.min.js"></script>
+  <link rel="stylesheet" href="kbd.css" type="text/css" media="all" />
+  <style>
+    kbd {
+      font-size: 1em;
+      padding: 0.5em;
+      vertical-align: middle;
+      margin: 0.3em;
+      display: inline-block;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page-heading">
+    <h1></h1><a href="index.pt-BR">Back to main page</a>
+  </div>
+  <div>
+    <div style="display: inline-block; vertical-align: top">
+      <canvas id="canvas" style="border:none" width="720" height="690"></canvas></div>
+    <div style="display: inline-block; vertical-align: top; margin-left: 1em;">
+      <h2>Settings</h2>
+      <p>
+        <label for="sel_texture">Texture:
+          <select id="sel_texture">
+            <option value="uv_test_bw_1024.png">uv_test_bw_1024.png</option>
+            <option value="uv_test.png">uv_test.png</option>
+            <option value="UV_Grid_Sm.jpg">UV_Grid_Sm.jpg</option>
+            <option value="SBC_ag-ag2042-b.jpg">SBC_ag-ag2042-b.jpg</option>
+            <option value="checker-map_tho_blog.png">checker-map_tho_blog.png</option>
+            <option value="checkerboard.png">checkerboard.png</option>
+            <option value="CbxKs.jpg">CbxKs.jpg</option>
+            <option value="solid-color">Solid color</option>
+          </select>
+        </label>
+      </p>
+      <p>
+        <label for="txt_color">Color:
+          <input type="text" id="txt_color" value="#ffffff" />
+        </label>
+        <div style="text-align: center"><canvas id="picker" style="display: inline-block"></canvas></div>
+      </p>
+      <p>
+        <label for="sel_render_mode">Mode:
+          <select id="sel_render_mode">
+            <option value="">none</option>
+            <option value="MeshBasicMaterial">basic</option>
+            <option value="MeshLambertMaterial">goroud</option>
+            <option value="MeshPhongMaterial" selected>phong</option>
+          </select>
+        </label>
+      </p>
+      <h3>Wireframes</h3>
+      <p>
+        <label for="chk_wireframe">
+          <input type="checkbox" id="chk_wireframe" name="chk_wireframe">
+          wireframes
+        </label>
+      </p>
+      <p>
+        <label for="chk_edges">
+          <input type="checkbox" id="chk_edges" name="chk_edges">
+          edges
+        </label>
+        <label for="num_edge_angle">
+          min. angle
+          <input type="number" id="num_edge_angle" name="num_edge_angle" value="1">
+        </label>
+        <div class="switch-field">
+          <input type="radio" id="rad_angle_unit_1" name="rad_angle_unit" value="deg" checked />
+          <label for="rad_angle_unit_1">° (degree)</label>
+          <input type="radio" id="rad_angle_unit_2" name="rad_angle_unit" value="rad" />
+          <label for="rad_angle_unit_2">rad (radians)</label>
+          <input type="radio" id="rad_angle_unit_3" name="rad_angle_unit" value="pi_rad" />
+          <label for="rad_angle_unit_3">𝜋 rad (pi radians)</label>
+        </div>
+      </p>
+      <p>
+        <div class="switch-field">
+          <input type="radio" id="rad_norm_none" name="rad_normal" value="none" checked />
+          <label for="rad_norm_none">none</label>
+          <input type="radio" id="rad_norm_edge" name="rad_normal" value="edge" />
+          <label for="rad_norm_edge">at edges</label>
+          <input type="radio" id="rad_norm_face" name="rad_normal" value="face" />
+          <label for="rad_norm_face">at faces</label>
+        </div>
+        <label for="num_edge_angle">
+          normal size:
+          <input type="number" id="num_normal_sz" name="num_normal_sz" value="0.2" step="0.1" min="0">
+        </label>
+      </p>
+    </div>
+    <div style="display: inline-block; vertical-align: top; margin-left: 1em;">
+      <h2>Controls</h2>
+      <h3>Mouse</h3>
+      <div>Press any button and move the mouse over the scene.</div>
+      <h3>Keyboard</h3>
+      <div><kbd>A</kbd> rotate right relative to object</div>
+      <div><kbd>D</kbd> rotate left relative to object</div>
+      <div><kbd>W</kbd> rotate down relative to object</div>
+      <div><kbd>S</kbd> rotate up relative to object</div>
+      <div><kbd>Q</kbd> roll left relative to object</div>
+      <div><kbd>E</kbd> roll right relative to object</div>
+      <h3>Modifier keys</h3>
+      <div><kbd>shift</kbd> move light</div>
+      <div><kbd>alt</kbd> move object</div>
+    </div>
+  </div>
+</body>
+<script type="text/javascript">
+  'use strict'
+
+  document.querySelector('h1').innerText = document.title
+  main()
+
+  function main() {
+    const canvas = document.querySelector('#canvas')
+    const renderer = new THREE.WebGLRenderer({ canvas })
+
+    // camera
+    const fov = 100;
+    const aspect = canvas.clientWidth / canvas.clientHeight;
+    const near = 0.1;
+    const far = 10;
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    camera.position.z = 4;
+
+    // load textures
+    const textureLoader = new THREE.TextureLoader();
+    var current_texture = null
+
+    // scene
+    const scene = new THREE.Scene();
+
+    // geometry
+    const geometry = createCylinderGeometry({
+      r_steps: 4,
+      r_frac: 1 / 2,
+      a_steps: 24,
+    })
+
+    // material and texture
+    function load_texture(name) {
+      var texture = textureLoader.load(name)
+      texture.encoding = THREE.sRGBEncoding
+      texture.anisotropy = 16
+      texture.wrapS = THREE.RepeatWrapping
+      texture.wrapT = THREE.RepeatWrapping
+      return texture
+    }
+    current_texture = load_texture('uv_test_bw_1024.png')
+
+    const material = new THREE.MeshPhongMaterial({
+      color: 0xFFFFFF,
+      map: current_texture,
+    });
+
+    // mesh
+    const mesh = new THREE.Mesh(geometry, material);
+    geometry.computeBoundingSphere()
+    console.log(geometry.boundingSphere.radius)
+    const normal_line_length = geometry.boundingSphere.radius / 32
+    const normals = new THREE.VertexNormalsHelper(mesh, normal_line_length)
+    mesh.add(normals)
+
+    // edges geometry
+    // https://stackoverflow.com/questions/20153705/three-js-wireframe-material-all-polygons-vs-just-edges
+    var edge_geometry = new THREE.EdgesGeometry(geometry, 1)
+    var edge_material = new THREE.LineBasicMaterial({ color: 0xFFFFFF });
+    var edge_mesh = new THREE.LineSegments(edge_geometry, edge_material);
+    edge_mesh.visible = false
+    scene.add(edge_mesh)
+
+    // composing scene
+    scene.add(mesh);
+
+    // light source
+    const color = 0xFFFFFF;
+    const intensity = 1;
+    const light = new THREE.PointLight(color, intensity, 0, 2);
+    light.position.set(-1, 2, 4);
+    scene.add(light);
+
+    // lightBulb representing the light source
+    var lightBulb = new THREE.Mesh(
+      new THREE.SphereGeometry(0.25, 32, 32),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    )
+    lightBulb.position.copy(light.position)
+    scene.add(lightBulb);
+
+    const rot_about = mesh.position
+
+    const rot = Math.PI * 2 / 32
+    var rot_y = 0;
+
+    var prev_mouse = null
+    function handler(event) {
+      var transformation = null
+
+      // what is going to be moved
+      var rot_objects = []
+      if (event.shiftKey) {
+        rot_objects.push(light, lightBulb)
+      }
+      if (event.altKey) {
+        rot_objects.push(mesh)
+      }
+      if (rot_objects.length == 0) rot_objects.push(camera)
+
+      // if mouse is being used to move
+      var mouse_delta = null
+      if (event.type.startsWith("mouse")) {
+        mouse_delta = prev_mouse ? [event.x - prev_mouse[0], event.y - prev_mouse[1]] : null
+        prev_mouse = [event.x, event.y]
+
+        if (mouse_delta && event.buttons) {
+          var axis = new THREE.Vector3(mouse_delta[1], mouse_delta[0], 0).normalize()
+          var dist = Math.sqrt(mouse_delta[0] * mouse_delta[0] + mouse_delta[1] * mouse_delta[1])
+          transformation = new THREE.Matrix4().makeRotationAxis(axis, -Math.abs(rot * dist / 10))
+        }
+      }
+      if (event.type == "mouseup") mouse_delta = null
+
+      // if keyboard is being used to move
+      if (event.type == "keydown") {
+        if (event.keyCode == 65) {
+          transformation = new THREE.Matrix4().makeRotationY(+rot)
+        }
+        else if (event.keyCode == 68) {
+          transformation = new THREE.Matrix4().makeRotationY(-rot)
+        }
+        else if (event.keyCode == 87) {
+          transformation = new THREE.Matrix4().makeRotationX(+rot)
+        }
+        else if (event.keyCode == 83) {
+          transformation = new THREE.Matrix4().makeRotationX(-rot)
+        }
+        else if (event.keyCode == 81) {
+          transformation = new THREE.Matrix4().makeRotationZ(+rot)
+        }
+        else if (event.keyCode == 69) {
+          transformation = new THREE.Matrix4().makeRotationZ(-rot)
+        }
+        else console.log(event.keyCode);
+      }
+
+      if (transformation) {
+        for (var k of rot_objects)
+          object_relative_movement(rot_about, k, transformation)
+        event.preventDefault()
+      }
+    }
+
+    document.addEventListener('keydown', handler);
+
+    canvas.addEventListener("mousemove", handler);
+    canvas.addEventListener("mousedown", handler);
+    canvas.addEventListener("mouseup", handler);
+
+    var current_material_name = "MeshPhongMaterial"
+    var current_color = "#FFFFFF"
+    var current_wireframe = false
+    function update_object_material(material_name, color, wireframe, texture, edge_min_angle) {
+      if (typeof arguments[0] == 'object') {
+        var args = arguments[0]
+        material_name = args.material_name
+        color = args.color
+        wireframe = args.wireframe
+        texture = args.texture
+      }
+
+      material_name = typeof material_name == "undefined" ? current_material_name : material_name
+      color = typeof color == "undefined" ? current_color : color
+      texture = typeof texture == "undefined" ? current_texture : texture
+      wireframe = typeof wireframe == "undefined" ? current_wireframe : wireframe
+
+      mesh.material = new THREE[material_name]({
+        color: color,
+        wireframe: wireframe,
+        map: texture
+      })
+    }
+
+    var color_picker = new KellyColorPicker({ place: 'picker', input: 'txt_color', size: 150 })
+
+    sel_texture.addEventListener("change", function (event) {
+      if (event.target.value == "solid-color") {
+        current_color = color_picker.getInput().value
+        current_texture = null
+        update_object_material({texture: null})
+      }
+      else {
+        current_texture = load_texture(event.target.value)
+        update_object_material()
+      }
+    })
+
+    sel_render_mode.addEventListener("change", function (event) {
+      if (event.target.value == "") {
+        mesh.visible = false
+      }
+      else {
+        mesh.visible = true
+        current_material_name = event.target.value
+        update_object_material()
+      }
+    })
+
+    function txt_color_change(event) {
+      current_color = event.getCurColorHex ? event.getCurColorHex() : event.target.value
+      update_object_material()
+    }
+    txt_color.addEventListener("change", txt_color_change)
+    txt_color.addEventListener("input", txt_color_change)
+    color_picker.addUserEvent("change", txt_color_change)
+
+    chk_wireframe.addEventListener("change", function(event) {
+      current_wireframe = this.checked
+      update_object_material()
+    })
+
+    chk_edges.addEventListener("change", function(event) {
+      edge_mesh.visible = this.checked
+    })
+
+    function handle_edge_visualization_event(event) {
+      scene.remove(edge_mesh)
+      var angle = parseFloat(num_edge_angle.value)
+
+      if (rad_angle_unit_1.checked) ;
+      if (rad_angle_unit_2.checked) angle = angle*180/Math.PI
+      if (rad_angle_unit_3.checked) angle = angle*180
+
+      if (rad_angle_unit_1.checked) num_edge_angle.step = 1
+      if (rad_angle_unit_2.checked) num_edge_angle.step = 1/180*Math.PI
+      if (rad_angle_unit_3.checked) num_edge_angle.step = 1/180
+
+      edge_geometry = new THREE.EdgesGeometry(geometry, angle)
+      edge_material = new THREE.LineBasicMaterial({ color: "#FFFFFF" });
+      edge_mesh = new THREE.LineSegments(edge_geometry, edge_material);
+      edge_mesh.visible = chk_edges.checked
+      scene.add(edge_mesh)
+    }
+    num_edge_angle.addEventListener("change", handle_edge_visualization_event)
+    rad_angle_unit_1.addEventListener("change", handle_edge_visualization_event)
+    rad_angle_unit_2.addEventListener("change", handle_edge_visualization_event)
+    rad_angle_unit_3.addEventListener("change", handle_edge_visualization_event)
+
+    // rendering scene through the view of the camera
+    function render(time) {
+      time /= 1000; // convert milliseconds to seconds
+
+      renderer.render(scene, camera);
+
+      requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+  }
+
+  function object_relative_movement(position, object, transformation) {
+    /**
+     * Performs a relative movement given a referece point, an object and the transformation do apply.
+     * @param {Vertex3} position The reference position for the transformation.
+     * @param {Mesh|Camera|Light} object The object that will be rotated about the given position.
+     * @param {Matrix4} transformation The matrix representing the transformation that will be applied to the object.
+     */
+    var matrixWorldInverse = object.matrixWorldInverse || new THREE.Matrix4().getInverse(object.matrixWorld)
+    var Oc = position.clone().applyMatrix4(matrixWorldInverse)
+    var T = new THREE.Matrix4()
+    T.setPosition(Oc)
+    var Ti = new THREE.Matrix4()
+    Ti.getInverse(T)
+    var Cn = new THREE.Matrix4()
+    Cn.premultiply(Ti)
+    Cn.premultiply(transformation)
+    Cn.premultiply(T)
+    Cn.premultiply(object.matrix)
+    object.matrix = Cn
+    object.matrixAutoUpdate = false
+    object.updateMatrixWorld(true)
+  }
+</script>
