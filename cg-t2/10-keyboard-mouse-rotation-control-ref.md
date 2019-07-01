@@ -5,9 +5,7 @@ layout: default
 
 {% include mathjax.html %}
 
-# Cilindro
-
-## Rotação controlada manualmente
+# Rotação controlada manualmente
 
 Rotacionar objetos pode parecer trivial, mas obter um resultado intuitivo não é.
 
